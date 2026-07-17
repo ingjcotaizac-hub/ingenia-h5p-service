@@ -201,7 +201,7 @@ async function initAndMount() {
   } catch { console.warn('[H5P] Core assets no encontrados.'); }
 
   // 7. Ruta: Editor H5P
-  app.get('/h5p/editor{/:contentId}', async (req, res) => {
+  app.get('/h5p/editor/:contentId?', async (req, res) => {
     try {
       const user = getH5PUser(req);
       const contentId = (req.params as any).contentId || undefined;
