@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "build": "echo 'No compilation needed'",
+    "start": "tsx src/index.ts"
   },
   "engines": {
     "node": ">=22.0.0"
