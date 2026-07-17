@@ -1,5 +1,6 @@
 [build]
 builder = "nixpacks"
+buildCommand = "npm install && npm run build"
 
 [deploy]
 startCommand = "npm run start"
@@ -8,3 +9,6 @@ restartPolicyMaxRetries = 3
 
 [[volumes]]
 mountPath = "/app/h5p-storage"
+
+[nixpacks]
+pkgs = ["nodejs_22"]
