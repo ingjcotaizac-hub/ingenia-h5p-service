@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "echo 'No compilation needed - tsx runs TS directly'",
-    "start": "tsx src/index.ts"
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -23,15 +23,15 @@
     "express": "*",
     "jsonwebtoken": "*",
     "jwks-rsa": "*",
-    "multer": "*"
+    "multer": "*",
+    "tsx": "*",
+    "typescript": "*"
   },
   "devDependencies": {
     "@types/cors": "*",
     "@types/express": "*",
     "@types/jsonwebtoken": "*",
     "@types/multer": "*",
-    "@types/node": "*",
-    "tsx": "*",
-    "typescript": "*"
+    "@types/node": "*"
   }
 }
