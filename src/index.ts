@@ -108,7 +108,16 @@ function getH5PUser(req: express.Request): any {
 }
 
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
-const supabase = createClient(SUPABASE_URL || 'https://placeholder.supabase.co', SUPABASE_SERVICE_KEY || 'placeholder');
+let supabase: any = null;
+try {
+  let safeUrl = SUPABASE_URL || 'https://placeholder.supabase.co';
+  if (safeUrl && !safeUrl.startsWith('http')) {
+    safeUrl = 'https://' + safeUrl;
+  }
+  supabase = createClient(safeUrl, SUPABASE_SERVICE_KEY || 'placeholder');
+} catch (e: any) {
+  console.error('[Startup Error] No se pudo inicializar Supabase. Revisa la variable SUPABASE_URL:', e.message);
+}
 
 // ── SCRIPT postMessage para comunicar guardado al padre React ─────────────────
 const POST_MESSAGE_SCRIPT = `

@@ -134,7 +134,17 @@ function getH5PUser(req) {
     };
 }
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
-const supabase = (0, supabase_js_1.createClient)(SUPABASE_URL || 'https://placeholder.supabase.co', SUPABASE_SERVICE_KEY || 'placeholder');
+let supabase = null;
+try {
+    let safeUrl = SUPABASE_URL || 'https://placeholder.supabase.co';
+    if (safeUrl && !safeUrl.startsWith('http')) {
+        safeUrl = 'https://' + safeUrl;
+    }
+    supabase = (0, supabase_js_1.createClient)(safeUrl, SUPABASE_SERVICE_KEY || 'placeholder');
+}
+catch (e) {
+    console.error('[Startup Error] No se pudo inicializar Supabase. Revisa la variable SUPABASE_URL:', e.message);
+}
 // ── SCRIPT postMessage para comunicar guardado al padre React ─────────────────
 const POST_MESSAGE_SCRIPT = `
 <script>
