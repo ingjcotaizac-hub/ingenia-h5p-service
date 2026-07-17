@@ -87,16 +87,21 @@ function getMime(filename: string): string {
 
 // ── INICIALIZACIÓN H5P ────────────────────────────────────────────────────────
 async function initH5P() {
-  // Crear directorios necesarios en el volumen persistente de Railway
+// Crear directorios necesarios en el volumen persistente de Railway
   for (const dir of ['libraries', 'content', 'tmp', 'config']) {
     fs.mkdirSync(path.join(H5P_ROOT, dir), { recursive: true });
   }
 
+  // Pre-crear config.json vacío si no existe — JsonStorage requiere que el archivo exista
+  const configJsonPath = path.join(H5P_ROOT, 'config', 'config.json');
+  if (!fs.existsSync(configJsonPath)) {
+    fs.writeFileSync(configJsonPath, '{}', 'utf-8');
+    console.log('[H5P] config.json creado en:', configJsonPath);
+  }
+
   // Configuración H5P almacenada en JSON en el volumen persistente
   const config = await new H5P.H5PConfig(
-    new H5P.fsImplementations.JsonStorage(
-      path.join(H5P_ROOT, 'config', 'config.json')
-    )
+    new H5P.fsImplementations.JsonStorage(configJsonPath)
   ).load();
 
   // Única propiedad que necesitamos configurar externamente
