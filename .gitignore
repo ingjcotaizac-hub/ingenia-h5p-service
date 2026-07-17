@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.env
+h5p-storage/
+*.log
