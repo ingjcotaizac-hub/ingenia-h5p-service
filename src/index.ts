@@ -228,8 +228,18 @@ async function initAndMount() {
   try {
     const H5PExpress = require('@lumieducation/h5p-express');
     const ajaxRouterFn = H5PExpress.h5pAjaxExpressRouter || H5PExpress.default?.h5pAjaxExpressRouter;
+    
+    // Buscar la ruta del core de H5P (igual que en la inicialización estática)
+    const h5pPkgPath = path.dirname(require.resolve('@lumieducation/h5p-server/package.json'));
+    const coreAssets = path.join(h5pPkgPath, 'build', 'assets');
+
     if (typeof ajaxRouterFn === 'function') {
-      app.use('/h5p/ajax', ajaxRouterFn(h5pEditor, { getUser: async (req: any) => getH5PUser(req) }));
+      app.use('/h5p/ajax', ajaxRouterFn(
+        h5pEditor,
+        coreAssets, // h5pCorePath
+        'es',       // languageOverride
+        { getUser: async (req: any) => getH5PUser(req) } // options
+      ));
       console.log('[H5P] Router AJAX montado.');
     }
   } catch (err: any) { console.warn('[H5P] Router AJAX no montado:', err.message); }
