@@ -355,14 +355,15 @@ async function main() {
     });
   });
 
-  app.listen(PORT, () => {
-    console.log(`[Ingenia H5P Service] Puerto ${PORT} | Storage: ${H5P_ROOT}`);
-    console.log(`[Ingenia H5P Service] Editor: http://localhost:${PORT}/h5p/editor`);
-    console.log(`[Ingenia H5P Service] Health: http://localhost:${PORT}/health`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Ingenia H5P Service] ✅ Escuchando en 0.0.0.0:${PORT}`);
+    console.log(`[Ingenia H5P Service] Storage: ${H5P_ROOT}`);
+    console.log(`[Ingenia H5P Service] Supabase: ${SUPABASE_URL ? 'configurado' : 'NO configurado'}`);
   });
 }
 
 main().catch((err) => {
-  console.error('[FATAL]', err);
+  console.error('[FATAL]', err.message || err);
+  console.error('[FATAL STACK]', err.stack);
   process.exit(1);
 });
