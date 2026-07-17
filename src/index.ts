@@ -6,6 +6,8 @@ import * as H5P from '@lumieducation/h5p-server';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
+import extractZip from 'extract-zip';
+import crypto from 'crypto';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -121,7 +123,107 @@ app.post('/upload', upload.single('file'), async (req, res): Promise<void> => {
   }
 });
 
-// ── SERVIDOR HTTP: se vincula ANTES que H5P se inicialice ─────────────────────
+// ── ENDPOINT PARA SUBIR Y DESCOMPRIMIR SCORM EN SERVIDOR ──
+app.post('/upload-scorm', upload.single('file'), async (req, res): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'No file provided' });
+      return;
+    }
+
+    const scormId = crypto.randomUUID();
+    const scormDir = path.join(H5P_ROOT, 'scorm', 'content', scormId);
+    
+    // Create temp zip file
+    const tempZipPath = path.join(H5P_ROOT, 'tmp', `${scormId}.zip`);
+    fs.mkdirSync(path.join(H5P_ROOT, 'tmp'), { recursive: true });
+    fs.writeFileSync(tempZipPath, req.file.buffer);
+
+    // Extract zip
+    await extractZip(tempZipPath, { dir: scormDir });
+    fs.unlinkSync(tempZipPath);
+
+    // Find imsmanifest.xml or entry point
+    let entryPoint = 'index.html';
+    const manifestPath = path.join(scormDir, 'imsmanifest.xml');
+    const upperManifestPath = path.join(scormDir, 'IMSMANIFEST.XML');
+    
+    if (fs.existsSync(manifestPath) || fs.existsSync(upperManifestPath)) {
+      const manifestFile = fs.existsSync(manifestPath) ? manifestPath : upperManifestPath;
+      const manifestXml = fs.readFileSync(manifestFile, 'utf-8');
+      
+      const resourceMatch = manifestXml.match(/<resource[^>]*href=["']([^"']+)["'][^>]*scormtype=["']sco["']/i);
+      if (resourceMatch && resourceMatch[1]) {
+        entryPoint = resourceMatch[1];
+      } else {
+        const fallbackMatch = manifestXml.match(/<resource[^>]*href=["']([^"']+)["']/i);
+        if (fallbackMatch && fallbackMatch[1]) {
+          entryPoint = fallbackMatch[1];
+        }
+      }
+    }
+
+    res.status(200).json({
+      scormId,
+      entryPoint,
+      size: req.file.size,
+      name: req.file.originalname
+    });
+  } catch (error: any) {
+    console.error('[Upload SCORM Fatal]', error);
+    res.status(500).json({ error: error.message || 'Internal error' });
+  }
+});
+
+// ── SERVIR CONTENIDO SCORM ESTÁTICO ──
+app.use('/scorm/content', express.static(path.join(H5P_ROOT, 'scorm', 'content')));
+
+// ── REPRODUCTOR SCORM CON API INYECTADA ──
+app.get('/scorm/play/:id', (req, res) => {
+  const scormId = req.params.id;
+  const entryPoint = req.query.entry || 'index.html';
+  const iframeSrc = `/scorm/content/${scormId}/${entryPoint}`;
+  
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SCORM Player</title>
+  <style>
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #fff; }
+    iframe { width: 100%; height: 100%; border: none; }
+  </style>
+  <script>
+    var scormData = {};
+    window.API = {
+      LMSInitialize: function() { return "true"; },
+      LMSGetValue: function(key) { return scormData[key] || ""; },
+      LMSSetValue: function(key, value) { scormData[key] = value; return "true"; },
+      LMSCommit: function() { 
+        window.parent.postMessage({ type: 'scorm-score', scormData: scormData }, '*'); 
+        return "true"; 
+      },
+      LMSFinish: function() { 
+        window.parent.postMessage({ type: 'scorm-score', scormData: scormData }, '*'); 
+        return "true"; 
+      },
+      LMSGetLastError: function() { return "0"; },
+      LMSGetErrorString: function() { return ""; },
+      LMSGetDiagnostic: function() { return ""; }
+    };
+    window.API_1484_11 = window.API; // SCORM 2004 fallback
+  </script>
+</head>
+<body>
+  <iframe src="${iframeSrc}" allowfullscreen="true" allow="microphone; camera"></iframe>
+</body>
+</html>
+  `;
+  res.send(html);
+});
+
+
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`[Ingenia H5P Service] ✅ Escuchando en 0.0.0.0:${PORT}`);
   // Inicializar H5P después de que el servidor ya está escuchando

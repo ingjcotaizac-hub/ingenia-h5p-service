@@ -21,6 +21,7 @@
     "@supabase/supabase-js": "*",
     "cors": "*",
     "express": "*",
+    "extract-zip": "^2.0.1",
     "jsonwebtoken": "*",
     "jwks-rsa": "*",
     "multer": "^2.2.0"
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@types/cors": "*",
     "@types/express": "*",
+    "@types/extract-zip": "^2.0.0",
     "@types/jsonwebtoken": "*",
     "@types/multer": "^2.2.0",
     "@types/node": "*",
