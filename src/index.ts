@@ -18,9 +18,11 @@ const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET || '';
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (origin === FRONTEND_URL || origin.endsWith('.vercel.app') || origin.includes('localhost')) {
-      return callback(null, true);
-    }
+    if (
+      origin === FRONTEND_URL ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost')
+    ) return callback(null, true);
     callback(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
@@ -28,8 +30,8 @@ app.use(cors({
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: true, limit: '500mb' }));
 
-// ── MIDDLEWARE: Validar JWT de Supabase ────────────────────────────────────────
-function getH5PUser(req: express.Request): H5P.IUser {
+// ── USUARIO H5P (usa `any` para evitar cambios de tipado entre versiones) ─────
+function getH5PUser(req: express.Request): any {
   const token = req.headers.authorization?.split(' ')[1];
   let userId = 'anonymous';
   let userName = 'Anonymous';
@@ -42,7 +44,7 @@ function getH5PUser(req: express.Request): H5P.IUser {
       userEmail = decoded.email || userEmail;
       userName = decoded.user_metadata?.name || userEmail;
     } catch {
-      // Token inválido o expirado — se permite como anónimo (el editor aún funciona)
+      // Token inválido — continuar como anónimo
     }
   }
 
@@ -50,38 +52,58 @@ function getH5PUser(req: express.Request): H5P.IUser {
     id: userId,
     name: userName,
     email: userEmail,
-    type: 'local' as H5P.UserType,
+    type: 'local',
     canInstallRecommended: false,
     canUpdateAndInstallLibraries: true,
     canCreateRestricted: false,
   };
 }
 
-// ── SUPABASE CLIENT (server-side con service role) ────────────────────────────
+// ── SUPABASE (server-side con service role para escritura en Storage) ─────────
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+// ── MIME TYPES ────────────────────────────────────────────────────────────────
+function getMime(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  const map: Record<string, string> = {
+    '.json': 'application/json',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.html': 'text/html',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.mp4': 'video/mp4',
+    '.webm': 'video/webm',
+    '.mp3': 'audio/mpeg',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+  };
+  return map[ext] || 'application/octet-stream';
+}
 
 // ── INICIALIZACIÓN H5P ────────────────────────────────────────────────────────
 async function initH5P() {
-  // Crear directorios necesarios
-  const dirs = ['libraries', 'content', 'tmp', 'config', 'keyvalue', 'lock'];
-  for (const dir of dirs) {
+  // Crear directorios necesarios en el volumen persistente de Railway
+  for (const dir of ['libraries', 'content', 'tmp', 'config']) {
     fs.mkdirSync(path.join(H5P_ROOT, dir), { recursive: true });
   }
 
-  // Configuración H5P
+  // Configuración H5P almacenada en JSON en el volumen persistente
   const config = await new H5P.H5PConfig(
-    new H5P.fsImplementations.JsonStorage(path.join(H5P_ROOT, 'config', 'config.json'))
+    new H5P.fsImplementations.JsonStorage(
+      path.join(H5P_ROOT, 'config', 'config.json')
+    )
   ).load();
 
+  // Única propiedad que necesitamos configurar externamente
   config.baseUrl = process.env.H5P_BASE_URL || `http://localhost:${PORT}`;
-  config.ajaxPath = '/h5p/ajax/';
-  config.librariesPath = '/h5p/libraries/';
-  config.contentFilesPath = '/h5p/content/';
-  config.maxFileSize = 300 * 1024 * 1024; // 300MB
-  config.maxTotalSize = 500 * 1024 * 1024; // 500MB
   await config.save();
 
-  // Almacenamiento en filesystem (Railway persistent volume)
+  // Almacenamientos en filesystem (Railway persistent volume en /app/h5p-storage)
   const libraryStorage = new H5P.fsImplementations.FileLibraryStorage(
     path.join(H5P_ROOT, 'libraries')
   );
@@ -91,13 +113,15 @@ async function initH5P() {
   const tempStorage = new H5P.fsImplementations.DirectoryTemporaryFileStorage(
     path.join(H5P_ROOT, 'tmp')
   );
-  const keyValueStorage = new H5P.fsImplementations.DirectoryKeyValueStorage(
-    path.join(H5P_ROOT, 'keyvalue')
-  );
+
+  // Cache en memoria (se pierde al reiniciar, es solo caché de rendimiento)
+  const kvStorage = new H5P.fsImplementations.InMemoryStorage();
   const cachedStorage = new H5P.cacheImplementations.CachedKeyValueStorage(
-    'kvcache', keyValueStorage
+    'kvcache',
+    kvStorage
   );
 
+  // Editor y Player H5P
   const h5pEditor = new H5P.H5PEditor(
     cachedStorage,
     config,
@@ -112,66 +136,122 @@ async function initH5P() {
     config
   );
 
-  return { config, h5pEditor, h5pPlayer, contentStorage };
+  return { config, h5pEditor, h5pPlayer };
 }
+
+// ── SCRIPT QUE SE INYECTA EN EL EDITOR PARA COMUNICAR EL GUARDADO ────────────
+const POST_MESSAGE_SCRIPT = `
+<script>
+(function() {
+  var tries = 0;
+  var interval = setInterval(function() {
+    tries++;
+    if (tries > 120) { clearInterval(interval); return; }
+    if (window.H5PEditor && window.H5PEditor.instances && window.H5PEditor.instances.length > 0) {
+      clearInterval(interval);
+      var editor = window.H5PEditor.instances[0];
+      if (editor && editor.on) {
+        editor.on('save', function(contentId) {
+          window.parent.postMessage(JSON.stringify({
+            action: 'h5p-saved',
+            contentId: String(contentId || 'new')
+          }), '*');
+        });
+      }
+    }
+  }, 500);
+})();
+</script>
+`;
 
 // ── SERVIDOR ──────────────────────────────────────────────────────────────────
 async function main() {
-  const { h5pEditor, h5pPlayer, contentStorage } = await initH5P();
+  const { h5pEditor, h5pPlayer } = await initH5P();
 
-  // ── Archivos estáticos de H5P (bibliotecas y contenido) ──
+  // Archivos estáticos del contenido y librerías H5P
   app.use('/h5p/libraries', express.static(path.join(H5P_ROOT, 'libraries')));
   app.use('/h5p/content', express.static(path.join(H5P_ROOT, 'content')));
-  app.use('/h5p/core', express.static(
-    path.join(process.cwd(), 'node_modules/@lumieducation/h5p-server/build/assets/h5p-core')
-  ));
-  app.use('/h5p/editor-core', express.static(
-    path.join(process.cwd(), 'node_modules/@lumieducation/h5p-server/build/assets/h5p-editor')
-  ));
 
-  // ── RUTA: Página del Editor H5P (cargada en iframe desde React) ──
+  // Assets del core de H5P (JS/CSS del editor y reproductor)
+  try {
+    const h5pPkgPath = path.dirname(
+      require.resolve('@lumieducation/h5p-server/package.json')
+    );
+    const coreAssets = path.join(h5pPkgPath, 'build', 'assets');
+    if (fs.existsSync(coreAssets)) {
+      app.use('/h5p-core', express.static(coreAssets));
+    }
+  } catch {
+    console.warn('[h5p-core] No se encontraron los assets del core de H5P.');
+  }
+
+  // ── Ruta: Editor H5P (cargado en iframe desde React) ──
   app.get('/h5p/editor/:contentId?', async (req, res) => {
     try {
       const user = getH5PUser(req);
-      const contentId = req.params.contentId || undefined;
+      const contentId = (req.params as any).contentId || undefined;
       const lang = (req.query.language as string) || 'es';
-      const model = await h5pEditor.render(contentId as any, lang, user);
-      res.send(model.html);
+      const model = await (h5pEditor as any).render(contentId, lang, user);
+      const rawHtml: string =
+        typeof model === 'string'
+          ? model
+          : model?.html || JSON.stringify(model);
+      const finalHtml = rawHtml.includes('</body>')
+        ? rawHtml.replace('</body>', POST_MESSAGE_SCRIPT + '</body>')
+        : rawHtml + POST_MESSAGE_SCRIPT;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(finalHtml);
     } catch (err: any) {
-      console.error('[editor render error]', err.message);
-      res.status(500).send(`<p>Error al cargar el editor H5P: ${err.message}</p>`);
+      console.error('[editor]', err.message);
+      res.status(500).send(
+        `<html><body><p style="color:red;font-family:sans-serif">
+         Error al cargar el editor H5P:<br><code>${err.message}</code></p></body></html>`
+      );
     }
   });
 
-  // ── RUTA: Página del Player H5P (cargada en iframe desde React) ──
+  // ── Ruta: Player H5P (alternativa para preview en iframe) ──
   app.get('/h5p/play/:contentId', async (req, res) => {
     try {
       const user = getH5PUser(req);
-      const model = await h5pPlayer.render(req.params.contentId, user);
-      res.send(model.html);
+      const model = await (h5pPlayer as any).render(req.params.contentId, user);
+      const html: string =
+        typeof model === 'string' ? model : model?.html || JSON.stringify(model);
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(html);
     } catch (err: any) {
-      console.error('[player render error]', err.message);
-      res.status(500).send(`<p>Error al reproducir H5P: ${err.message}</p>`);
+      console.error('[player]', err.message);
+      res.status(500).send(
+        `<html><body><p style="color:red">Error: ${err.message}</p></body></html>`
+      );
     }
   });
 
-  // ── RUTAS AJAX de H5P (requeridas por el editor internamente) ──
-  const { h5pAjaxExpressRouter, libraryAdministrationExpressRouter } = await import('@lumieducation/h5p-express');
+  // ── Rutas AJAX internas del editor H5P ──
+  // h5p-express maneja todas las subidas de archivos, librerías y contenido
+  try {
+    const H5PExpress = require('@lumieducation/h5p-express');
+    const ajaxRouterFn =
+      H5PExpress.h5pAjaxExpressRouter ||
+      H5PExpress.default?.h5pAjaxExpressRouter;
 
-  app.use(
-    '/h5p/ajax',
-    h5pAjaxExpressRouter(
-      h5pEditor,
-      express.Router(),
-      { getUser: async (req) => getH5PUser(req) }
-    )
-  );
+    if (typeof ajaxRouterFn === 'function') {
+      app.use(
+        '/h5p/ajax',
+        ajaxRouterFn(h5pEditor, {
+          getUser: async (req: any) => getH5PUser(req),
+        })
+      );
+      console.log('[h5p-express] Router AJAX montado en /h5p/ajax');
+    } else {
+      console.warn('[h5p-express] h5pAjaxExpressRouter no encontrado, el editor puede tener funcionalidad limitada.');
+    }
+  } catch (err: any) {
+    console.warn('[h5p-express] No se pudo montar el router AJAX:', err.message);
+  }
 
-  app.use('/h5p/libraries-admin', libraryAdministrationExpressRouter(h5pEditor, express.Router(), {
-    getUser: async (req) => getH5PUser(req),
-  }));
-
-  // ── API: Publicar contenido a Supabase Storage (llamada desde React al guardar) ──
+  // ── API: Publicar contenido H5P a Supabase Storage ──
+  // React llama a este endpoint después de que el docente guarda en el editor
   app.post('/api/publish', async (req, res) => {
     const { contentId, tenantId, activityId } = req.body as {
       contentId: string;
@@ -180,34 +260,41 @@ async function main() {
     };
 
     if (!contentId || !tenantId || !activityId) {
-      return res.status(400).json({ error: 'Faltan parámetros: contentId, tenantId, activityId' });
+      return res
+        .status(400)
+        .json({ error: 'Faltan parámetros: contentId, tenantId, activityId' });
     }
 
     try {
-      const contentPath = path.join(H5P_ROOT, 'content', contentId);
+      const contentPath = path.join(H5P_ROOT, 'content', String(contentId));
       if (!fs.existsSync(contentPath)) {
-        return res.status(404).json({ error: `Contenido ${contentId} no encontrado en el servidor H5P` });
+        return res
+          .status(404)
+          .json({ error: `Contenido ${contentId} no encontrado en el servidor H5P` });
       }
 
       const storagePrefix = `${tenantId}/h5p/${activityId}`;
       let uploadedCount = 0;
+      const errors: string[] = [];
 
-      // Función recursiva para subir todos los archivos del contenido
-      const uploadDirectory = async (localPath: string, remotePrefix: string) => {
+      // Sube recursivamente todos los archivos del contenido H5P
+      const uploadDir = async (localPath: string, remotePrefix: string) => {
         const entries = fs.readdirSync(localPath, { withFileTypes: true });
         for (const entry of entries) {
-          const fullLocalPath = path.join(localPath, entry.name);
+          const fullPath = path.join(localPath, entry.name);
           const remoteKey = `${remotePrefix}/${entry.name}`;
           if (entry.isDirectory()) {
-            await uploadDirectory(fullLocalPath, remoteKey);
+            await uploadDir(fullPath, remoteKey);
           } else {
-            const fileBuffer = fs.readFileSync(fullLocalPath);
-            const mimeType = getMimeType(entry.name);
+            const buffer = fs.readFileSync(fullPath);
             const { error } = await supabase.storage
               .from('h5p-content')
-              .upload(remoteKey, fileBuffer, { upsert: true, contentType: mimeType });
+              .upload(remoteKey, buffer, {
+                upsert: true,
+                contentType: getMime(entry.name),
+              });
             if (error) {
-              console.error(`[upload error] ${remoteKey}:`, error.message);
+              errors.push(`${remoteKey}: ${error.message}`);
             } else {
               uploadedCount++;
             }
@@ -215,71 +302,59 @@ async function main() {
         }
       };
 
-      await uploadDirectory(contentPath, storagePrefix);
+      await uploadDir(contentPath, storagePrefix);
 
-      // También subir los archivos de las bibliotecas que usa este contenido
+      // También subir las librerías que usa este contenido
       const h5pJsonPath = path.join(contentPath, 'h5p.json');
       if (fs.existsSync(h5pJsonPath)) {
-        const h5pJson = JSON.parse(fs.readFileSync(h5pJsonPath, 'utf-8'));
-        const deps: string[] = [];
-        if (h5pJson.preloadedDependencies) {
-          for (const dep of h5pJson.preloadedDependencies) {
-            deps.push(`${dep.machineName}-${dep.majorVersion}.${dep.minorVersion}`);
+        try {
+          const h5pMeta = JSON.parse(fs.readFileSync(h5pJsonPath, 'utf-8'));
+          const deps: string[] = (h5pMeta.preloadedDependencies || []).map(
+            (d: any) => `${d.machineName}-${d.majorVersion}.${d.minorVersion}`
+          );
+          for (const libName of deps) {
+            const libPath = path.join(H5P_ROOT, 'libraries', libName);
+            if (fs.existsSync(libPath)) {
+              await uploadDir(libPath, `${storagePrefix}/libraries/${libName}`);
+            }
           }
-        }
-        // Subir cada librería requerida
-        for (const libName of deps) {
-          const libPath = path.join(H5P_ROOT, 'libraries', libName);
-          if (fs.existsSync(libPath)) {
-            await uploadDirectory(libPath, `${storagePrefix}/libraries/${libName}`);
-          }
+        } catch {
+          // Si no podemos leer las dependencias, continuar sin ellas
         }
       }
 
       const publicBaseUrl = `${SUPABASE_URL}/storage/v1/object/public/h5p-content/${storagePrefix}`;
 
-      res.json({
+      console.log(`[publish] ${activityId}: ${uploadedCount} archivos subidos a Supabase Storage`);
+
+      return res.json({
         success: true,
         contentId,
         storageBaseUrl: publicBaseUrl,
         filesUploaded: uploadedCount,
+        errors: errors.length > 0 ? errors : undefined,
       });
     } catch (err: any) {
       console.error('[publish error]', err);
-      res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: err.message });
     }
   });
 
-  // ── API: Health check ──
+  // ── Health check ──
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      h5pRoot: H5P_ROOT,
+      supabaseConfigured: !!SUPABASE_URL,
+    });
   });
 
   app.listen(PORT, () => {
-    console.log(`[Ingenia H5P Service] Puerto: ${PORT}`);
-    console.log(`[Ingenia H5P Service] Storage: ${H5P_ROOT}`);
-    console.log(`[Ingenia H5P Service] Frontend permitido: ${FRONTEND_URL}`);
+    console.log(`[Ingenia H5P Service] Puerto ${PORT} | Storage: ${H5P_ROOT}`);
+    console.log(`[Ingenia H5P Service] Editor: http://localhost:${PORT}/h5p/editor`);
+    console.log(`[Ingenia H5P Service] Health: http://localhost:${PORT}/health`);
   });
-}
-
-function getMimeType(filename: string): string {
-  const ext = path.extname(filename).toLowerCase();
-  const map: Record<string, string> = {
-    '.json': 'application/json',
-    '.js': 'application/javascript',
-    '.css': 'text/css',
-    '.html': 'text/html',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.svg': 'image/svg+xml',
-    '.mp4': 'video/mp4',
-    '.mp3': 'audio/mpeg',
-    '.woff': 'font/woff',
-    '.woff2': 'font/woff2',
-  };
-  return map[ext] || 'application/octet-stream';
 }
 
 main().catch((err) => {
