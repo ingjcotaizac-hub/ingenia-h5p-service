@@ -191,7 +191,7 @@ async function main() {
   }
 
   // ── Ruta: Editor H5P (cargado en iframe desde React) ──
-  app.get('/h5p/editor/:contentId?', async (req, res) => {
+  app.get('/h5p/editor{/:contentId}', async (req, res) => {
     try {
       const user = getH5PUser(req);
       const contentId = (req.params as any).contentId || undefined;
