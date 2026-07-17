@@ -23,13 +23,13 @@
     "express": "*",
     "jsonwebtoken": "*",
     "jwks-rsa": "*",
-    "multer": "*"
+    "multer": "^2.2.0"
   },
   "devDependencies": {
     "@types/cors": "*",
     "@types/express": "*",
     "@types/jsonwebtoken": "*",
-    "@types/multer": "*",
+    "@types/multer": "^2.2.0",
     "@types/node": "*",
     "tsx": "*",
     "typescript": "*"

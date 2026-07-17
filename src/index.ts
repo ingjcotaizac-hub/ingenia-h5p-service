@@ -5,6 +5,12 @@ import fs from 'fs';
 import * as H5P from '@lumieducation/h5p-server';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
+
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 250 * 1024 * 1024 } // 250 MB
+});
 
 const PORT = process.env.PORT || 3001;
 const H5P_ROOT = process.env.H5P_ROOT || path.join(process.cwd(), 'h5p-storage');
@@ -56,6 +62,63 @@ app.get('/health', (_req, res) => {
 // Ruta raíz — responde 200 para evitar 502
 app.get('/', (_req, res) => {
   res.status(200).json({ service: 'Ingenia H5P Service', status: h5pStatus });
+});
+
+// ── ENDPOINT PARA SUBIR ARCHIVOS DIRECTO A SUPABASE ────────
+app.post('/upload', upload.single('file'), async (req, res): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'No file provided' });
+      return;
+    }
+
+    if (!supabase || !SUPABASE_URL) {
+      res.status(500).json({ error: 'Supabase no está configurado en el backend' });
+      return;
+    }
+
+    const folder = req.headers['x-upload-folder'] as string || 'uploads';
+    const tenantId = req.headers['x-upload-tenant'] as string || 'shared';
+    // Use the actual original filename from multer
+    const originalName = req.file.originalname;
+    
+    // Ensure the bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.find((b: any) => b.name === folder);
+    if (!bucketExists) {
+      await supabase.storage.createBucket(folder, { public: true });
+      console.log(`[Upload] Created public bucket: ${folder}`);
+    }
+
+    const ext = path.extname(originalName) || '.bin';
+    // UUID random string for safe filename
+    const uuid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const key = `${tenantId}/${uuid}${ext}`;
+
+    const { data, error } = await supabase.storage.from(folder).upload(key, req.file.buffer, {
+      contentType: req.file.mimetype,
+      upsert: true
+    });
+
+    if (error) {
+      console.error('[Upload Error]', error);
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage.from(folder).getPublicUrl(key);
+
+    res.status(200).json({
+      url: publicUrlData.publicUrl,
+      key,
+      size: req.file.size,
+      type: req.file.mimetype,
+      name: originalName
+    });
+  } catch (error: any) {
+    console.error('[Upload Fatal]', error);
+    res.status(500).json({ error: error.message || 'Internal error' });
+  }
 });
 
 // ── SERVIDOR HTTP: se vincula ANTES que H5P se inicialice ─────────────────────
