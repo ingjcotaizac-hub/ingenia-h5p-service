@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "echo 'Pre-compiled code committed, no build needed'",
+    "build": "tsc",
     "start": "node dist/index.js"
   },
   "engines": {
@@ -20,7 +20,7 @@
     "@lumieducation/h5p-server": "*",
     "@supabase/supabase-js": "*",
     "cors": "*",
-    "express": "*",
+    "express": "^4.21.0",
     "extract-zip": "^2.0.1",
     "jsonwebtoken": "*",
     "jwks-rsa": "*",

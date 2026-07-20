@@ -44,6 +44,8 @@ const H5P = __importStar(require("@lumieducation/h5p-server"));
 const supabase_js_1 = require("@supabase/supabase-js");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const multer_1 = __importDefault(require("multer"));
+const extract_zip_1 = __importDefault(require("extract-zip"));
+const crypto_1 = __importDefault(require("crypto"));
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
     limits: { fileSize: 250 * 1024 * 1024 } // 250 MB
@@ -142,7 +144,97 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         res.status(500).json({ error: error.message || 'Internal error' });
     }
 });
-// ── SERVIDOR HTTP: se vincula ANTES que H5P se inicialice ─────────────────────
+// ── ENDPOINT PARA SUBIR Y DESCOMPRIMIR SCORM EN SERVIDOR ──
+app.post('/upload-scorm', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            res.status(400).json({ error: 'No file provided' });
+            return;
+        }
+        const scormId = crypto_1.default.randomUUID();
+        const scormDir = path_1.default.join(H5P_ROOT, 'scorm', 'content', scormId);
+        // Create temp zip file
+        const tempZipPath = path_1.default.join(H5P_ROOT, 'tmp', `${scormId}.zip`);
+        fs_1.default.mkdirSync(path_1.default.join(H5P_ROOT, 'tmp'), { recursive: true });
+        fs_1.default.writeFileSync(tempZipPath, req.file.buffer);
+        // Extract zip
+        await (0, extract_zip_1.default)(tempZipPath, { dir: scormDir });
+        fs_1.default.unlinkSync(tempZipPath);
+        // Find imsmanifest.xml or entry point
+        let entryPoint = 'index.html';
+        const manifestPath = path_1.default.join(scormDir, 'imsmanifest.xml');
+        const upperManifestPath = path_1.default.join(scormDir, 'IMSMANIFEST.XML');
+        if (fs_1.default.existsSync(manifestPath) || fs_1.default.existsSync(upperManifestPath)) {
+            const manifestFile = fs_1.default.existsSync(manifestPath) ? manifestPath : upperManifestPath;
+            const manifestXml = fs_1.default.readFileSync(manifestFile, 'utf-8');
+            const resourceMatch = manifestXml.match(/<resource[^>]*href=["']([^"']+)["'][^>]*scormtype=["']sco["']/i);
+            if (resourceMatch && resourceMatch[1]) {
+                entryPoint = resourceMatch[1];
+            }
+            else {
+                const fallbackMatch = manifestXml.match(/<resource[^>]*href=["']([^"']+)["']/i);
+                if (fallbackMatch && fallbackMatch[1]) {
+                    entryPoint = fallbackMatch[1];
+                }
+            }
+        }
+        res.status(200).json({
+            scormId,
+            entryPoint,
+            size: req.file.size,
+            name: req.file.originalname
+        });
+    }
+    catch (error) {
+        console.error('[Upload SCORM Fatal]', error);
+        res.status(500).json({ error: error.message || 'Internal error' });
+    }
+});
+// ── SERVIR CONTENIDO SCORM ESTÁTICO ──
+app.use('/scorm/content', express_1.default.static(path_1.default.join(H5P_ROOT, 'scorm', 'content')));
+// ── REPRODUCTOR SCORM CON API INYECTADA ──
+app.get('/scorm/play/:id', (req, res) => {
+    const scormId = req.params.id;
+    const entryPoint = req.query.entry || 'index.html';
+    const iframeSrc = `/scorm/content/${scormId}/${entryPoint}`;
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SCORM Player</title>
+  <style>
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #fff; }
+    iframe { width: 100%; height: 100%; border: none; }
+  </style>
+  <script>
+    var scormData = {};
+    window.API = {
+      LMSInitialize: function() { return "true"; },
+      LMSGetValue: function(key) { return scormData[key] || ""; },
+      LMSSetValue: function(key, value) { scormData[key] = value; return "true"; },
+      LMSCommit: function() { 
+        window.parent.postMessage({ type: 'scorm-score', scormData: scormData }, '*'); 
+        return "true"; 
+      },
+      LMSFinish: function() { 
+        window.parent.postMessage({ type: 'scorm-score', scormData: scormData }, '*'); 
+        return "true"; 
+      },
+      LMSGetLastError: function() { return "0"; },
+      LMSGetErrorString: function() { return ""; },
+      LMSGetDiagnostic: function() { return ""; }
+    };
+    window.API_1484_11 = window.API; // SCORM 2004 fallback
+  </script>
+</head>
+<body>
+  <iframe src="${iframeSrc}" allowfullscreen="true" allow="microphone; camera"></iframe>
+</body>
+</html>
+  `;
+    res.send(html);
+});
 app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`[Ingenia H5P Service] ✅ Escuchando en 0.0.0.0:${PORT}`);
     // Inicializar H5P después de que el servidor ya está escuchando
