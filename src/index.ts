@@ -732,7 +732,7 @@ async function initAndMount() {
     const coreAssets = path.join(h5pPkgPath, 'build', 'assets');
 
     if (typeof ajaxRouterFn === 'function') {
-      app.use('/h5p/ajax', ajaxRouterFn(
+      app.use('/', ajaxRouterFn(
         h5pEditor,
         coreAssets,
         'es',
@@ -744,7 +744,6 @@ async function initAndMount() {
   // 10. Dummy endpoints para telemetría/estado del player (evitar 404s)
   app.all('/contentUserData/*', (req, res) => res.status(200).json({}));
   app.all('/setFinished', (req, res) => res.status(200).json({}));
-  app.all('/ajax', (req, res) => res.status(200).json({}));
 
   // 11. API: Subir archivo .h5p nativamente
   app.post('/api/upload-h5p', upload.single('file'), async (req, res) => {

@@ -691,14 +691,13 @@ async function initAndMount() {
         const h5pPkgPath = path_1.default.dirname(require.resolve('@lumieducation/h5p-server/package.json'));
         const coreAssets = path_1.default.join(h5pPkgPath, 'build', 'assets');
         if (typeof ajaxRouterFn === 'function') {
-            app.use('/h5p/ajax', ajaxRouterFn(h5pEditor, coreAssets, 'es', { getUser: async (req) => getH5PUser(req) }));
+            app.use('/', ajaxRouterFn(h5pEditor, coreAssets, 'es', { getUser: async (req) => getH5PUser(req) }));
         }
     }
     catch (err) { }
     // 10. Dummy endpoints para telemetría/estado del player (evitar 404s)
     app.all('/contentUserData/*', (req, res) => res.status(200).json({}));
     app.all('/setFinished', (req, res) => res.status(200).json({}));
-    app.all('/ajax', (req, res) => res.status(200).json({}));
     // 11. API: Subir archivo .h5p nativamente
     app.post('/api/upload-h5p', upload.single('file'), async (req, res) => {
         try {
