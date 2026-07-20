@@ -347,9 +347,11 @@ async function initAndMount() {
     const h5pEditor = new H5P.H5PEditor(cachedStorage, config, libraryStorage, contentStorage, tempStorage);
     const h5pPlayer = new H5P.H5PPlayer(libraryStorage, contentStorage, config);
     console.log('[H5P] Editor y Player inicializados.');
-    // 6. Archivos estáticos H5P
-    app.use('/h5p/libraries', express_1.default.static(path_1.default.join(H5P_ROOT, 'libraries')));
-    app.use('/h5p/content', express_1.default.static(path_1.default.join(H5P_ROOT, 'content')));
+    // 6. Archivos estáticos H5P (deben coincidir con el baseUrl de H5PConfig)
+    app.use('/libraries', express_1.default.static(path_1.default.join(H5P_ROOT, 'libraries')));
+    app.use('/h5p/libraries', express_1.default.static(path_1.default.join(H5P_ROOT, 'libraries'))); // Por compatibilidad
+    app.use('/content', express_1.default.static(path_1.default.join(H5P_ROOT, 'content')));
+    app.use('/h5p/content', express_1.default.static(path_1.default.join(H5P_ROOT, 'content'))); // Por compatibilidad
     // Montar core y editor desde las carpetas locales en la raíz
     app.use('/core', express_1.default.static(path_1.default.join(process.cwd(), 'core')));
     app.use('/editor', express_1.default.static(path_1.default.join(process.cwd(), 'editor')));
@@ -357,18 +359,16 @@ async function initAndMount() {
         const h5pPkgPath = path_1.default.dirname(require.resolve('@lumieducation/h5p-server/package.json'));
         const coreAssets = path_1.default.join(h5pPkgPath, 'build', 'assets');
         if (fs_1.default.existsSync(coreAssets)) {
-            app.use('/h5p-core', express_1.default.static(coreAssets));
-            console.log('[H5P] Assets del core montados en /h5p-core');
+            app.use('/core', express_1.default.static(path_1.default.join(coreAssets, 'core')));
+            app.use('/editor', express_1.default.static(path_1.default.join(coreAssets, 'editor')));
         }
     }
-    catch {
-        console.warn('[H5P] Core assets no encontrados.');
-    }
-    // 7. Ruta: Editor H5P
+    catch (e) { }
+    // 7. Ruta: Editor H5P (GET y POST)
     app.get('/h5p/editor/:contentId?', async (req, res) => {
         try {
             const user = getH5PUser(req);
-            const contentId = req.params.contentId || undefined;
+            const contentId = req.params.contentId === 'new' ? undefined : req.params.contentId;
             const lang = req.query.language || 'es';
             const model = await h5pEditor.render(contentId, lang, user);
             const rawHtml = typeof model === 'string' ? model : (model?.html || JSON.stringify(model));
@@ -381,6 +381,22 @@ async function initAndMount() {
         catch (err) {
             console.error('[Editor error]', err.message);
             res.status(500).send(`<html><body><p style="color:red">Error: ${err.message}</p></body></html>`);
+        }
+    });
+    app.post('/h5p/editor/:contentId?', async (req, res) => {
+        try {
+            const user = getH5PUser(req);
+            const contentIdParam = req.params.contentId;
+            const contentId = contentIdParam === 'new' ? undefined : contentIdParam;
+            if (!req.body.params) {
+                return res.status(400).json({ error: 'Faltan los parámetros del editor (req.body.params)' });
+            }
+            const newContentId = await h5pEditor.saveOrUpdateContent(contentId ? String(contentId) : undefined, req.body.params.params, req.body.params.metadata, req.body.library, user);
+            res.status(200).json({ contentId: newContentId });
+        }
+        catch (err) {
+            console.error('[Save error]', err.message);
+            res.status(500).json({ error: err.message });
         }
     });
     // 8. Ruta: Player H5P
@@ -401,20 +417,17 @@ async function initAndMount() {
     try {
         const H5PExpress = require('@lumieducation/h5p-express');
         const ajaxRouterFn = H5PExpress.h5pAjaxExpressRouter || H5PExpress.default?.h5pAjaxExpressRouter;
-        // Buscar la ruta del core de H5P (igual que en la inicialización estática)
         const h5pPkgPath = path_1.default.dirname(require.resolve('@lumieducation/h5p-server/package.json'));
         const coreAssets = path_1.default.join(h5pPkgPath, 'build', 'assets');
         if (typeof ajaxRouterFn === 'function') {
-            app.use('/h5p/ajax', ajaxRouterFn(h5pEditor, coreAssets, // h5pCorePath
-            'es', // languageOverride
-            { getUser: async (req) => getH5PUser(req) } // options
-            ));
-            console.log('[H5P] Router AJAX montado.');
+            app.use('/h5p/ajax', ajaxRouterFn(h5pEditor, coreAssets, 'es', { getUser: async (req) => getH5PUser(req) }));
         }
     }
-    catch (err) {
-        console.warn('[H5P] Router AJAX no montado:', err.message);
-    }
+    catch (err) { }
+    // 10. Dummy endpoints para telemetría/estado del player (evitar 404s)
+    app.all('/contentUserData/*', (req, res) => res.status(200).json({}));
+    app.all('/setFinished', (req, res) => res.status(200).json({}));
+    app.all('/ajax', (req, res) => res.status(200).json({}));
     // 11. API: Subir archivo .h5p nativamente
     app.post('/api/upload-h5p', upload.single('file'), async (req, res) => {
         try {
