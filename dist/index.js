@@ -364,23 +364,74 @@ async function initAndMount() {
         }
     }
     catch (e) { }
-    // 7. Ruta: Editor H5P (GET y POST)
+    // 7. Ruta: Editor H5P (GET)
     app.get('/h5p/editor/:contentId?', async (req, res) => {
         try {
             const user = getH5PUser(req);
-            const contentId = req.params.contentId === 'new' ? undefined : req.params.contentId;
+            const contentIdParam = req.params.contentId;
+            const contentId = (!contentIdParam || contentIdParam === 'new') ? undefined : contentIdParam;
             const lang = req.query.language || 'es';
             const model = await h5pEditor.render(contentId, lang, user);
-            const rawHtml = typeof model === 'string' ? model : (model?.html || JSON.stringify(model));
-            const finalHtml = rawHtml.includes('</body>')
-                ? rawHtml.replace('</body>', POST_MESSAGE_SCRIPT + '</body>')
-                : rawHtml + POST_MESSAGE_SCRIPT;
+            console.log('[Editor GET] model type:', typeof model, 'keys:', model && typeof model === 'object' ? Object.keys(model) : 'n/a');
+            // Si el modelo devuelve HTML directamente, usarlo con H5PIntegration inyectado
+            if (typeof model === 'string') {
+                const finalHtml = model.includes('</body>')
+                    ? model.replace('</body>', POST_MESSAGE_SCRIPT + '</body>')
+                    : model + POST_MESSAGE_SCRIPT;
+                res.setHeader('Content-Type', 'text/html; charset=utf-8');
+                return res.send(finalHtml);
+            }
+            // Construir página HTML completa a partir del modelo IEditorModel
+            const integration = model?.integration || model?.h5pIntegration || {};
+            const scripts = model?.scripts || [];
+            const styles = model?.styles || [];
+            const scriptTags = scripts
+                .map((s) => `<script src="${s}"></script>`)
+                .join('\n  ');
+            const styleTags = styles
+                .map((s) => `<link rel="stylesheet" href="${s}">`)
+                .join('\n  ');
+            const saveAction = contentId ? `/h5p/editor/${contentId}` : '/h5p/editor/new';
+            const html = `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>H5P Editor</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 8px 12px; font-family: Arial, sans-serif; background: #fff; }
+    .h5p-editor { min-height: 400px; }
+    .h5peditor-form { padding: 0; }
+    input[type=submit] { display: none; }
+  </style>
+  <script>
+    window.H5PIntegration = ${JSON.stringify(integration)};
+  </script>
+  ${styleTags}
+</head>
+<body>
+  <form method="post" action="${saveAction}" enctype="multipart/form-data" id="h5p-content-form">
+    <div class="h5p-editor">
+    </div>
+    <input type="submit" name="submit" value="Create" id="h5p-submit-btn">
+  </form>
+  ${scriptTags}
+  ${POST_MESSAGE_SCRIPT}
+  <script>
+    // Interceptar envío del formulario para hacer logging
+    document.getElementById('h5p-content-form').addEventListener('submit', function(e) {
+      console.log('[H5P Form] Submitting form...');
+    });
+  </script>
+</body>
+</html>`;
             res.setHeader('Content-Type', 'text/html; charset=utf-8');
-            res.send(finalHtml);
+            res.send(html);
         }
         catch (err) {
-            console.error('[Editor error]', err.message);
-            res.status(500).send(`<html><body><p style="color:red">Error: ${err.message}</p></body></html>`);
+            console.error('[Editor GET error]', err.message, err.stack?.substring(0, 500));
+            res.status(500).send(`<html><body><p style="color:red">Error al cargar el editor H5P: ${err.message}</p></body></html>`);
         }
     });
     // El editor H5P envía multipart/form-data (necesita soportar imágenes dentro del editor)
