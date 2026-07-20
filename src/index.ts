@@ -426,7 +426,43 @@ async function initAndMount() {
     }
   } catch (err: any) { console.warn('[H5P] Router AJAX no montado:', err.message); }
 
-  // 10. API: Publicar contenido a Supabase Storage
+  // 11. API: Subir archivo .h5p nativamente
+  app.post('/api/upload-h5p', upload.single('file'), async (req, res) => {
+    try {
+      const user = getH5PUser(req);
+      if (!req.file) {
+        return res.status(400).json({ error: 'No se adjuntó ningún archivo' });
+      }
+
+      // Guardar el archivo temporalmente
+      const tempPath = path.join(H5P_ROOT, 'tmp', `upload_${Date.now()}.h5p`);
+      fs.writeFileSync(tempPath, req.file.buffer);
+
+      // Usar el PackageImporter ya instanciado dentro del editor
+      const packageImporter = (h5pEditor as any).packageImporter;
+      if (!packageImporter) {
+        throw new Error('El PackageImporter no está disponible en el editor H5P.');
+      }
+
+      console.log(`[H5P] Importando paquete desde ${tempPath}...`);
+      const result = await packageImporter.addPackageLibrariesAndContent(tempPath, user);
+      console.log(`[H5P] Paquete importado con éxito. ID: ${result.id}`);
+
+      // Limpiar archivo temporal
+      try {
+        fs.unlinkSync(tempPath);
+      } catch (e) {
+        console.warn(`[H5P] No se pudo borrar el archivo temporal: ${tempPath}`);
+      }
+
+      res.status(200).json({ contentId: result.id });
+    } catch (err: any) {
+      console.error('[Upload H5P error]', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 12. API: Publicar contenido a Supabase Storage
   app.post('/api/publish', async (req, res) => {
     const { contentId, tenantId, activityId } = req.body;
     if (!contentId || !tenantId || !activityId) {
