@@ -309,6 +309,54 @@ const POST_MESSAGE_SCRIPT = `
 </script>
 `;
 
+// ── SCRIPT que intercepta el submit del formulario H5P y lo envía por AJAX ────
+// Esto evita que el iframe navegue a la respuesta del POST (mostrando el error 400)
+const AJAX_INTERCEPT_SCRIPT = `
+<script>
+(function() {
+  function interceptForm() {
+    var form = document.getElementById('h5p-content-form');
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+      e.preventDefault(); // <-- CLAVE: evitar navegación del iframe
+      var formData = new FormData(form);
+      console.log('[H5P AJAX] Enviando formulario via fetch a:', form.action);
+      fetch(form.action, { method: 'POST', body: formData })
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+          // Extraer el contentId de la respuesta
+          var match = html.match(/contentId[^'"\d]*['"]?(\d+)['"]?/);
+          if (match && match[1]) {
+            console.log('[H5P AJAX] Guardado exitoso. contentId:', match[1]);
+            window.parent.postMessage(JSON.stringify({
+              context: 'h5p',
+              action: 'saved',
+              contentId: match[1]
+            }), '*');
+          } else if (html.includes('Error:')) {
+            console.error('[H5P AJAX] Error al guardar:', html.substring(0, 300));
+            window.parent.postMessage(JSON.stringify({
+              context: 'h5p',
+              action: 'save-error',
+              message: html.replace(/<[^>]+>/g, '').substring(0, 200)
+            }), '*');
+          }
+        })
+        .catch(function(err) {
+          console.error('[H5P AJAX] Fetch error:', err);
+        });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', interceptForm);
+  } else {
+    interceptForm();
+  }
+})();
+</script>
+`;
+
 // ── INICIALIZACIÓN H5P + MONTAJE DE RUTAS ────────────────────────────────────
 async function initAndMount() {
   console.log('[H5P] Iniciando inicialización...');
@@ -380,17 +428,28 @@ async function initAndMount() {
     try {
       const user = getH5PUser(req);
       const contentIdParam = (req.params as any).contentId;
-      const contentId = (!contentIdParam || contentIdParam === 'new') ? undefined : contentIdParam;
+      // Si el contentId no existe (Railway reiniciado), tratar como nuevo
+      let contentId = (!contentIdParam || contentIdParam === 'new') ? undefined : contentIdParam;
       const lang = (req.query.language as string) || 'es';
       
-      const model: any = await (h5pEditor as any).render(contentId, lang, user);
+      let model: any;
+      try {
+        model = await (h5pEditor as any).render(contentId, lang, user);
+      } catch (renderErr: any) {
+        // Contenido no encontrado (ej. Railway reiniciado) → editor vacío
+        console.warn('[Editor GET] Content not found, falling back to new editor:', renderErr.message);
+        contentId = undefined;
+        model = await (h5pEditor as any).render(undefined, lang, user);
+      }
+      
       console.log('[Editor GET] model type:', typeof model, 'keys:', model && typeof model === 'object' ? Object.keys(model) : 'n/a');
 
-      // Si el modelo devuelve HTML directamente, usarlo con H5PIntegration inyectado
+      // Si el modelo devuelve HTML directamente, inyectar nuestro script de intercepción
       if (typeof model === 'string') {
+        const injected = AJAX_INTERCEPT_SCRIPT + POST_MESSAGE_SCRIPT;
         const finalHtml = model.includes('</body>')
-          ? model.replace('</body>', POST_MESSAGE_SCRIPT + '</body>')
-          : model + POST_MESSAGE_SCRIPT;
+          ? model.replace('</body>', injected + '</body>')
+          : model + injected;
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         return res.send(finalHtml);
       }
@@ -434,13 +493,8 @@ async function initAndMount() {
     <input type="submit" name="submit" value="Create" id="h5p-submit-btn">
   </form>
   ${scriptTags}
+  ${AJAX_INTERCEPT_SCRIPT}
   ${POST_MESSAGE_SCRIPT}
-  <script>
-    // Interceptar envío del formulario para hacer logging
-    document.getElementById('h5p-content-form').addEventListener('submit', function(e) {
-      console.log('[H5P Form] Submitting form...');
-    });
-  </script>
 </body>
 </html>`;
 
