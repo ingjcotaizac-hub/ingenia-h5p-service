@@ -394,9 +394,8 @@ async function initAndMount() {
     const contentStorage = new H5P.fsImplementations.FileContentStorage(path_1.default.join(H5P_ROOT, 'content'));
     const tempStorage = new H5P.fsImplementations.DirectoryTemporaryFileStorage(path_1.default.join(H5P_ROOT, 'tmp'));
     const kvStorage = new H5P.fsImplementations.InMemoryStorage();
-    const cachedStorage = new H5P.cacheImplementations.CachedKeyValueStorage('kvcache', kvStorage);
     // 5. Editor y Player
-    const h5pEditor = new H5P.H5PEditor(cachedStorage, config, libraryStorage, contentStorage, tempStorage);
+    const h5pEditor = new H5P.H5PEditor(kvStorage, config, libraryStorage, contentStorage, tempStorage);
     const h5pPlayer = new H5P.H5PPlayer(libraryStorage, contentStorage, config);
     console.log('[H5P] Editor y Player inicializados.');
     // 6. Archivos estáticos H5P (deben coincidir con el baseUrl de H5PConfig)

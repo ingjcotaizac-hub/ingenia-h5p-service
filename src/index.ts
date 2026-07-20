@@ -403,10 +403,9 @@ async function initAndMount() {
     path.join(H5P_ROOT, 'tmp')
   );
   const kvStorage = new H5P.fsImplementations.InMemoryStorage();
-  const cachedStorage = new H5P.cacheImplementations.CachedKeyValueStorage('kvcache', kvStorage);
 
   // 5. Editor y Player
-  const h5pEditor = new H5P.H5PEditor(cachedStorage, config, libraryStorage, contentStorage, tempStorage);
+  const h5pEditor = new H5P.H5PEditor(kvStorage, config, libraryStorage, contentStorage, tempStorage);
   const h5pPlayer = new H5P.H5PPlayer(libraryStorage, contentStorage, config);
   console.log('[H5P] Editor y Player inicializados.');
 
