@@ -410,6 +410,35 @@ async function initAndMount() {
   app.use('/content', express.static(path.join(H5P_ROOT, 'content')));
   app.use('/h5p/content', express.static(path.join(H5P_ROOT, 'content'))); // Por compatibilidad
 
+  // Interceptar h5peditor.js para corregir el bug CORS que destruye el objeto
+  app.get('/editor/scripts/h5peditor.js', (req, res, next) => {
+    let editorJsPath = path.join(process.cwd(), 'editor', 'scripts', 'h5peditor.js');
+    if (!fs.existsSync(editorJsPath)) {
+      try {
+        const h5pPkgPath = path.dirname(require.resolve('@lumieducation/h5p-server/package.json'));
+        editorJsPath = path.join(h5pPkgPath, 'build', 'assets', 'editor', 'scripts', 'h5peditor.js');
+        if (!fs.existsSync(editorJsPath)) {
+          editorJsPath = path.join(h5pPkgPath, 'assets', 'editor', 'scripts', 'h5peditor.js');
+        }
+      } catch (e) {}
+    }
+
+    if (fs.existsSync(editorJsPath)) {
+      let content = fs.readFileSync(editorJsPath, 'utf8');
+      content = content.replace(
+        /\(function\(\)\{try\{return window\.parent\.H5PEditor;\}catch\(e\)\{return undefined;\}\}\)\(\)/g,
+        'window.H5PEditor'
+      );
+      content = content.replace(
+        /\(function\(\)\{try\{return window\.parent\.H5PIntegration;\}catch\(e\)\{return undefined;\}\}\)\(\)/g,
+        'window.H5PIntegration'
+      );
+      res.type('application/javascript').send(content);
+    } else {
+      next();
+    }
+  });
+
   // Montar core y editor desde las carpetas locales en la raíz
   app.use('/core', express.static(path.join(process.cwd(), 'core')));
   app.use('/editor', express.static(path.join(process.cwd(), 'editor')));
@@ -450,18 +479,6 @@ async function initAndMount() {
         // "parent.H5PIntegration || " que causa un SecurityError CORS cuando se embebe
         // en un iframe de otro dominio. Lo removemos.
         let safeModel = model.replace('parent.H5PIntegration ||', '');
-        
-        // 1. Crear el backup de la variable
-        safeModel = safeModel.replace(
-          /(window\.H5PIntegration\s*=\s*[\s\S]+?\}[\s\n]*)(<\/script>)/,
-          '$1;\nwindow.__MY_H5P_BACKUP = JSON.parse(JSON.stringify(window.H5PIntegration));\n$2'
-        );
-
-        // 2. Restaurar el backup DESPUÉS de que h5peditor.js destruya la variable
-        safeModel = safeModel.replace(
-          /(<script src="[^"]*h5peditor\.js[^"]*"><\/script>)/,
-          '$1\n<script>Object.assign(window.H5PIntegration, window.__MY_H5P_BACKUP);</script>'
-        );
         
         const CUSTOM_CSS = `
           <style>

@@ -399,6 +399,29 @@ async function initAndMount() {
     app.use('/h5p/libraries', express_1.default.static(path_1.default.join(H5P_ROOT, 'libraries'))); // Por compatibilidad
     app.use('/content', express_1.default.static(path_1.default.join(H5P_ROOT, 'content')));
     app.use('/h5p/content', express_1.default.static(path_1.default.join(H5P_ROOT, 'content'))); // Por compatibilidad
+    // Interceptar h5peditor.js para corregir el bug CORS que destruye el objeto
+    app.get('/editor/scripts/h5peditor.js', (req, res, next) => {
+        let editorJsPath = path_1.default.join(process.cwd(), 'editor', 'scripts', 'h5peditor.js');
+        if (!fs_1.default.existsSync(editorJsPath)) {
+            try {
+                const h5pPkgPath = path_1.default.dirname(require.resolve('@lumieducation/h5p-server/package.json'));
+                editorJsPath = path_1.default.join(h5pPkgPath, 'build', 'assets', 'editor', 'scripts', 'h5peditor.js');
+                if (!fs_1.default.existsSync(editorJsPath)) {
+                    editorJsPath = path_1.default.join(h5pPkgPath, 'assets', 'editor', 'scripts', 'h5peditor.js');
+                }
+            }
+            catch (e) { }
+        }
+        if (fs_1.default.existsSync(editorJsPath)) {
+            let content = fs_1.default.readFileSync(editorJsPath, 'utf8');
+            content = content.replace(/\(function\(\)\{try\{return window\.parent\.H5PEditor;\}catch\(e\)\{return undefined;\}\}\)\(\)/g, 'window.H5PEditor');
+            content = content.replace(/\(function\(\)\{try\{return window\.parent\.H5PIntegration;\}catch\(e\)\{return undefined;\}\}\)\(\)/g, 'window.H5PIntegration');
+            res.type('application/javascript').send(content);
+        }
+        else {
+            next();
+        }
+    });
     // Montar core y editor desde las carpetas locales en la raíz
     app.use('/core', express_1.default.static(path_1.default.join(process.cwd(), 'core')));
     app.use('/editor', express_1.default.static(path_1.default.join(process.cwd(), 'editor')));
@@ -436,10 +459,6 @@ async function initAndMount() {
                 // "parent.H5PIntegration || " que causa un SecurityError CORS cuando se embebe
                 // en un iframe de otro dominio. Lo removemos.
                 let safeModel = model.replace('parent.H5PIntegration ||', '');
-                // 1. Crear el backup de la variable
-                safeModel = safeModel.replace(/(window\.H5PIntegration\s*=\s*[\s\S]+?\}[\s\n]*)(<\/script>)/, '$1;\nwindow.__MY_H5P_BACKUP = JSON.parse(JSON.stringify(window.H5PIntegration));\n$2');
-                // 2. Restaurar el backup DESPUÉS de que h5peditor.js destruya la variable
-                safeModel = safeModel.replace(/(<script src="[^"]*h5peditor\.js[^"]*"><\/script>)/, '$1\n<script>Object.assign(window.H5PIntegration, window.__MY_H5P_BACKUP);</script>');
                 const CUSTOM_CSS = `
           <style>
             #save-h5p {
