@@ -432,10 +432,14 @@ async function initAndMount() {
             console.log('[Editor GET] model type:', typeof model, 'keys:', model && typeof model === 'object' ? Object.keys(model) : 'n/a');
             // Si el modelo devuelve HTML directamente, inyectar nuestro script de intercepción
             if (typeof model === 'string') {
-                const injected = AJAX_INTERCEPT_SCRIPT + POST_MESSAGE_SCRIPT;
-                const finalHtml = model.includes('</body>')
-                    ? model.replace('</body>', injected + '</body>')
-                    : model + injected;
+                // CORRECCIÓN CRUCIAL: El modelo de string de h5p-nodejs-library incluye 
+                // "parent.H5PIntegration || " que causa un SecurityError CORS cuando se embebe
+                // en un iframe de otro dominio. Lo removemos.
+                let safeModel = model.replace('parent.H5PIntegration ||', '');
+                const injected = POST_MESSAGE_SCRIPT;
+                const finalHtml = safeModel.includes('</body>')
+                    ? safeModel.replace('</body>', injected + '</body>')
+                    : safeModel + injected;
                 res.setHeader('Content-Type', 'text/html; charset=utf-8');
                 return res.send(finalHtml);
             }
@@ -475,7 +479,6 @@ async function initAndMount() {
     <input type="submit" name="submit" value="Create" id="h5p-submit-btn">
   </form>
   ${scriptTags}
-  ${AJAX_INTERCEPT_SCRIPT}
   ${POST_MESSAGE_SCRIPT}
 </body>
 </html>`;
@@ -531,32 +534,37 @@ async function initAndMount() {
             }
             const newContentId = await h5pEditor.saveOrUpdateContent(contentId ? String(contentId) : undefined, params, metadata, library, user);
             console.log('[H5P POST] Guardado exitoso, contentId:', newContentId);
-            // Devolver HTML con script para notificar al padre React
-            res.status(200).send(`<!DOCTYPE html><html><body>
-        <script>
-          try {
-            window.parent.postMessage(JSON.stringify({
-              context: 'h5p',
-              action: 'saved',
-              contentId: '${newContentId}'
-            }), '*');
-          } catch(e) {}
-          window.location.href = '/h5p/editor/${newContentId}?cb=' + Date.now();
-        </script>
-        <p>Guardado. ContentId: ${newContentId}</p>
-      </body></html>`);
+            // La librería nativa h5peditor.js espera JSON de vuelta con el contentId
+            res.status(200).send(JSON.stringify({ contentId: newContentId }));
         }
         catch (err) {
             console.error('[Save error]', err.message);
-            res.status(500).send(`<html><body><p style="color:red">Error: ${err.message}</p></body></html>`);
+            res.status(500).send(JSON.stringify({ error: err.message }));
         }
+    });
+    // Alias para /play/:contentId que la librería nativa llama tras guardar exitosamente
+    app.get('/play/:contentId', (req, res) => {
+        res.redirect(`/h5p/play/${req.params.contentId}`);
     });
     // 8. Ruta: Player H5P
     app.get('/h5p/play/:contentId', async (req, res) => {
         try {
             const user = getH5PUser(req);
             const model = await h5pPlayer.render(req.params.contentId, user);
-            const html = typeof model === 'string' ? model : (model?.html || JSON.stringify(model));
+            let html = typeof model === 'string' ? model : (model?.html || JSON.stringify(model));
+            // Inyectar script para avisar al padre React que la actividad se guardó y cargó el player
+            const notifyScript = `
+        <script>
+          try {
+            window.parent.postMessage(JSON.stringify({
+              context: 'h5p',
+              action: 'saved',
+              contentId: '${req.params.contentId}'
+            }), '*');
+          } catch(e) {}
+        </script>
+      `;
+            html = html.includes('</body>') ? html.replace('</body>', notifyScript + '</body>') : html + notifyScript;
             res.setHeader('Content-Type', 'text/html; charset=utf-8');
             res.send(html);
         }
