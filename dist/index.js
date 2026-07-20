@@ -465,7 +465,25 @@ async function initAndMount() {
     body { margin: 0; padding: 8px 12px; font-family: Arial, sans-serif; background: #fff; }
     .h5p-editor { min-height: 400px; }
     .h5peditor-form { padding: 0; }
-    input[type=submit] { display: none; }
+    
+    /* Estilo para el botón de guardado nativo de H5P */
+    input[type=submit] { 
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 20px;
+      margin-bottom: 20px;
+      width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+    input[type=submit]:hover { background: #0284c7; }
   </style>
   <script>
     window.H5PIntegration = ${JSON.stringify(integration)};
@@ -476,9 +494,36 @@ async function initAndMount() {
   <form method="post" action="${saveAction}" enctype="multipart/form-data" id="h5p-content-form">
     <div class="h5p-editor">
     </div>
-    <input type="submit" name="submit" value="Create" id="h5p-submit-btn">
+    <input type="submit" name="submit" value="Guardar Contenido Interactivo" id="h5p-submit-btn">
   </form>
   ${scriptTags}
+  
+  <script>
+    // Prevenir el POST nativo que causa el error 400 cuando el editor está vacío.
+    // El script nativo (h5peditor.js) hace su propio AJAX cuando la validación es correcta,
+    // pero si no hay nada seleccionado, permite el submit nativo. Lo bloqueamos.
+    document.addEventListener('DOMContentLoaded', function() {
+      var form = document.getElementById('h5p-content-form');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          // Si h5peditor existe pero no tiene parámetros, es porque no se ha seleccionado un tipo
+          if (window.h5peditor) {
+            var params = window.h5peditor.getParams();
+            if (!params || params.params === undefined) {
+              e.preventDefault();
+              alert('Por favor, selecciona un tipo de contenido interactivo (ej. Interactive Video) antes de guardar.');
+              return;
+            }
+          }
+          
+          // Prevenimos siempre el POST nativo por seguridad. 
+          // El h5peditor.js nativo ya hace $.ajax() y luego redirige.
+          e.preventDefault();
+        });
+      }
+    });
+  </script>
+  
   ${POST_MESSAGE_SCRIPT}
 </body>
 </html>`;
