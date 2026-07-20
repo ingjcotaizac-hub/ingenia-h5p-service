@@ -350,6 +350,9 @@ async function initAndMount() {
     // 6. Archivos estáticos H5P
     app.use('/h5p/libraries', express_1.default.static(path_1.default.join(H5P_ROOT, 'libraries')));
     app.use('/h5p/content', express_1.default.static(path_1.default.join(H5P_ROOT, 'content')));
+    // Montar core y editor desde las carpetas locales en la raíz
+    app.use('/core', express_1.default.static(path_1.default.join(process.cwd(), 'core')));
+    app.use('/editor', express_1.default.static(path_1.default.join(process.cwd(), 'editor')));
     try {
         const h5pPkgPath = path_1.default.dirname(require.resolve('@lumieducation/h5p-server/package.json'));
         const coreAssets = path_1.default.join(h5pPkgPath, 'build', 'assets');

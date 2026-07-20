@@ -360,6 +360,10 @@ async function initAndMount() {
   app.use('/h5p/libraries', express.static(path.join(H5P_ROOT, 'libraries')));
   app.use('/h5p/content', express.static(path.join(H5P_ROOT, 'content')));
 
+  // Montar core y editor desde las carpetas locales en la raíz
+  app.use('/core', express.static(path.join(process.cwd(), 'core')));
+  app.use('/editor', express.static(path.join(process.cwd(), 'editor')));
+  
   try {
     const h5pPkgPath = path.dirname(require.resolve('@lumieducation/h5p-server/package.json'));
     const coreAssets = path.join(h5pPkgPath, 'build', 'assets');
