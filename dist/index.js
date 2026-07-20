@@ -414,8 +414,8 @@ async function initAndMount() {
         }
         if (fs_1.default.existsSync(editorJsPath)) {
             let content = fs_1.default.readFileSync(editorJsPath, 'utf8');
-            content = content.replace(/\(function\(\)\{try\{return window\.parent\.H5PEditor;\}catch\(e\)\{return undefined;\}\}\)\(\)/g, 'window.H5PEditor');
-            content = content.replace(/\(function\(\)\{try\{return window\.parent\.H5PIntegration;\}catch\(e\)\{return undefined;\}\}\)\(\)/g, 'window.H5PIntegration');
+            content = content.replace(/\(function\(\)\{try\{return window\.parent\.H5PEditor;\}catch\(e\)\{return undefined;\}\}\)\(\)/g, '(function(){try{return window.parent.H5PEditor;}catch(e){return window.H5PEditor;}})()');
+            content = content.replace(/\(function\(\)\{try\{return window\.parent\.H5PIntegration;\}catch\(e\)\{return undefined;\}\}\)\(\)/g, '(function(){try{return window.parent.H5PIntegration;}catch(e){return window.H5PIntegration;}})()');
             res.type('application/javascript').send(content);
         }
         else {

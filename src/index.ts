@@ -427,11 +427,11 @@ async function initAndMount() {
       let content = fs.readFileSync(editorJsPath, 'utf8');
       content = content.replace(
         /\(function\(\)\{try\{return window\.parent\.H5PEditor;\}catch\(e\)\{return undefined;\}\}\)\(\)/g,
-        'window.H5PEditor'
+        '(function(){try{return window.parent.H5PEditor;}catch(e){return window.H5PEditor;}})()'
       );
       content = content.replace(
         /\(function\(\)\{try\{return window\.parent\.H5PIntegration;\}catch\(e\)\{return undefined;\}\}\)\(\)/g,
-        'window.H5PIntegration'
+        '(function(){try{return window.parent.H5PIntegration;}catch(e){return window.H5PIntegration;}})()'
       );
       res.type('application/javascript').send(content);
     } else {
