@@ -394,28 +394,56 @@ async function initAndMount() {
     }
   });
 
-  app.post('/h5p/editor/:contentId?', async (req, res) => {
+  app.post('/h5p/editor/:contentId?', upload.any(), async (req, res) => {
     try {
       const user = getH5PUser(req);
       const contentIdParam = (req.params as any).contentId;
       const contentId = contentIdParam === 'new' ? undefined : contentIdParam;
       
-      if (!req.body.params) {
-        return res.status(400).json({ error: 'Faltan los parámetros del editor (req.body.params)' });
+      let params = req.body.params?.params;
+      let metadata = req.body.params?.metadata;
+      let library = req.body.library;
+
+      // El editor envía los datos como "parameters" y "library" en multipart/form-data
+      if (req.body.parameters) {
+        try {
+          const parsed = JSON.parse(req.body.parameters);
+          params = parsed.params;
+          metadata = parsed.metadata;
+        } catch (e) {
+          console.warn('Error parsing parameters JSON', e);
+        }
+      }
+
+      if (!params || !library) {
+        return res.status(400).json({ error: 'Faltan los parámetros del editor (params o library). formData no fue procesada correctamente.' });
       }
 
       const newContentId = await h5pEditor.saveOrUpdateContent(
         contentId ? String(contentId) : undefined,
-        req.body.params.params,
-        req.body.params.metadata,
-        req.body.library,
+        params,
+        metadata,
+        library,
         user
       );
       
-      res.status(200).json({ contentId: newContentId });
+      // Devolver HTML con script para notificar al padre React
+      res.status(200).send(`
+        <html><body>
+          <script>
+            window.parent.postMessage(JSON.stringify({
+              context: 'h5p',
+              action: 'saved',
+              contentId: '${newContentId}'
+            }), '*');
+            // Opcional: recargar el editor
+            window.location.href = '/h5p/editor/${newContentId}?cb=' + Date.now();
+          </script>
+        </body></html>
+      `);
     } catch (err: any) {
       console.error('[Save error]', err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).send(`<html><body><p style="color:red">Error: ${err.message}</p></body></html>`);
     }
   });
 
