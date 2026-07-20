@@ -430,13 +430,56 @@ async function initAndMount() {
                 model = await h5pEditor.render(undefined, lang, user);
             }
             console.log('[Editor GET] model type:', typeof model, 'keys:', model && typeof model === 'object' ? Object.keys(model) : 'n/a');
-            // Si el modelo devuelve HTML directamente, inyectar nuestro script de intercepción
+            // Si el modelo devuelve HTML directamente, inyectar nuestros scripts y estilos
             if (typeof model === 'string') {
                 // CORRECCIÓN CRUCIAL: El modelo de string de h5p-nodejs-library incluye 
                 // "parent.H5PIntegration || " que causa un SecurityError CORS cuando se embebe
                 // en un iframe de otro dominio. Lo removemos.
                 let safeModel = model.replace('parent.H5PIntegration ||', '');
-                const injected = POST_MESSAGE_SCRIPT;
+                const CUSTOM_CSS = `
+          <style>
+            #save-h5p {
+              background: #0ea5e9 !important;
+              color: white !important;
+              border: none !important;
+              padding: 12px 24px !important;
+              border-radius: 8px !important;
+              font-weight: 800 !important;
+              font-size: 14px !important;
+              cursor: pointer !important;
+              margin: 20px auto !important;
+              display: block !important;
+              width: 90% !important;
+              text-transform: uppercase !important;
+              transition: background 0.2s !important;
+            }
+            #save-h5p:hover { background: #0284c7 !important; }
+          </style>
+        `;
+                const PREVENT_NATIVE_SUBMIT_SCRIPT = `
+          <script>
+            // Prevenir el POST nativo que causa el error 400 cuando la validación de H5P falla.
+            document.addEventListener('DOMContentLoaded', function() {
+              var form = document.getElementById('h5p-content-form');
+              if (form) {
+                form.addEventListener('submit', function(e) {
+                  if (window.h5peditor) {
+                    var params = window.h5peditor.getParams();
+                    if (!params || params.params === undefined) {
+                      e.preventDefault();
+                      alert('Por favor, selecciona un tipo de contenido o completa los campos requeridos antes de guardar.');
+                      return;
+                    }
+                  }
+                  // El script nativo (h5peditor.js) hace su propio AJAX si la validación pasa.
+                  // Siempre bloqueamos la navegación nativa.
+                  e.preventDefault();
+                });
+              }
+            });
+          </script>
+        `;
+                const injected = CUSTOM_CSS + PREVENT_NATIVE_SUBMIT_SCRIPT + POST_MESSAGE_SCRIPT;
                 const finalHtml = safeModel.includes('</body>')
                     ? safeModel.replace('</body>', injected + '</body>')
                     : safeModel + injected;
