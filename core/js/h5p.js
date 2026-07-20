@@ -265,7 +265,7 @@ H5P.init = function (target) {
         // Make it possible to resize the iframe when the content changes size. This way we get no scrollbars.
         var iframe = window.frameElement;
         var resizeIframe = function () {
-          if (window.parent.H5P.isFullscreen) {
+          if ((function(){try{return window.parent.H5P;}catch(e){return {};}})().isFullscreen) {
             return; // Skip if full screen.
           }
 
@@ -434,7 +434,7 @@ H5P.getHeadTags = function (contentId) {
          createStyleTags(H5PIntegration.contents['cid-' + contentId].styles) +
          createScriptTags(H5PIntegration.core.scripts) +
          createScriptTags(H5PIntegration.contents['cid-' + contentId].scripts) +
-         '<script>H5PIntegration = window.parent.H5PIntegration; var H5P = H5P || {}; H5P.externalEmbed = false;</script>';
+         '<script>H5PIntegration = (function(){try{return window.parent.H5PIntegration;}catch(e){return undefined;}})(); var H5P = H5P || {}; H5P.externalEmbed = false;</script>';
 };
 
 /**
@@ -524,10 +524,10 @@ H5P.fullScreen = function ($element, instance, exitCallback, body, forceSemiFull
 
   if (H5P.isFramed && H5P.externalEmbed === false) {
     // Trigger resize on wrapper in parent window.
-    window.parent.H5P.fullScreen($element, instance, exitCallback, H5P.$body.get(), forceSemiFullScreen);
+    (function(){try{return window.parent.H5P;}catch(e){return {};}})().fullScreen($element, instance, exitCallback, H5P.$body.get(), forceSemiFullScreen);
     H5P.isFullscreen = true;
     H5P.exitFullScreen = function () {
-      window.parent.H5P.exitFullScreen();
+      (function(){try{return window.parent.H5P;}catch(e){return {};}})().exitFullScreen();
     };
     H5P.on(instance, 'exitFullScreen', function () {
       H5P.isFullscreen = false;
@@ -2886,7 +2886,7 @@ H5P.createTitle = function (rawTitle, maxLength) {
     // since events may be fired on initialization.
     if (H5P.isFramed && H5P.externalEmbed === false) {
       H5P.externalDispatcher.on('*', function (event) {
-        window.parent.H5P.externalDispatcher.trigger.call(this, event);
+        (function(){try{return window.parent.H5P;}catch(e){return {};}})().externalDispatcher.trigger.call(this, event);
       });
     }
 
