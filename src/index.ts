@@ -46,6 +46,12 @@ app.use(cors({
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: true, limit: '500mb' }));
 
+// Middleware to inject user for all H5P routes
+app.use((req, res, next) => {
+  (req as any).user = getH5PUser(req);
+  next();
+});
+
 // ── HEALTH CHECK (disponible INMEDIATAMENTE, antes de inicializar H5P) ────────
 let h5pStatus: 'initializing' | 'ready' | 'error' = 'initializing';
 let h5pError = '';
