@@ -330,7 +330,11 @@ async function initAndMount() {
     }
     // 3. Configuración H5P
     const config = await new H5P.H5PConfig(new H5P.fsImplementations.JsonStorage(configJsonPath)).load();
-    config.baseUrl = process.env.H5P_BASE_URL || `http://localhost:${PORT}`;
+    let baseUrl = process.env.H5P_BASE_URL || `http://localhost:${PORT}`;
+    if (baseUrl && !baseUrl.startsWith('http')) {
+        baseUrl = 'https://' + baseUrl;
+    }
+    config.baseUrl = baseUrl;
     await config.save();
     console.log(`[H5P] Config cargada. baseUrl=${config.baseUrl}`);
     // 4. Almacenamientos en filesystem
