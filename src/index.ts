@@ -394,29 +394,46 @@ async function initAndMount() {
     }
   });
 
-  app.post('/h5p/editor/:contentId?', async (req, res) => {
+  // El editor H5P envía multipart/form-data (necesita soportar imágenes dentro del editor)
+  app.post('/h5p/editor/:contentId?', upload.any(), async (req, res) => {
     try {
       const user = getH5PUser(req);
       const contentIdParam = (req.params as any).contentId;
       const contentId = contentIdParam === 'new' ? undefined : contentIdParam;
-      
-      let params = req.body.params?.params;
-      let metadata = req.body.params?.metadata;
-      let library = req.body.library;
 
-      // El editor envía los datos como "parameters" y "library" en urlencoded o json
-      if (req.body.parameters) {
+      console.log('[H5P POST] body keys:', Object.keys(req.body));
+      
+      let params: any = undefined;
+      let metadata: any = undefined;
+      let library: string | undefined = req.body.library;
+
+      // Variante A: el editor envía req.body.params.params y req.body.params.metadata
+      if (req.body.params) {
+        const p = typeof req.body.params === 'string' ? JSON.parse(req.body.params) : req.body.params;
+        params = p.params ?? p;
+        metadata = p.metadata;
+      }
+
+      // Variante B: el editor envía req.body.parameters como JSON string
+      if (!params && req.body.parameters) {
         try {
           const parsed = typeof req.body.parameters === 'string' ? JSON.parse(req.body.parameters) : req.body.parameters;
-          params = parsed.params;
+          params = parsed.params ?? parsed;
           metadata = parsed.metadata;
         } catch (e) {
-          console.warn('Error parsing parameters JSON', e);
+          console.warn('[H5P POST] Error parsing parameters JSON', e);
         }
       }
 
+      // Variante C: campos planos (library, params directamente)
+      if (!params && req.body['params[params]']) {
+        try { params = JSON.parse(req.body['params[params]']); } catch(e) {}
+        try { metadata = JSON.parse(req.body['params[metadata]']); } catch(e) {}
+      }
+
       if (!params || !library) {
-        return res.status(400).send(`<html><body><p style="color:red">Error: Faltan los parámetros del editor (params o library).</p><pre>${JSON.stringify(req.body)}</pre></body></html>`);
+        console.error('[H5P POST] Missing params or library. body:', JSON.stringify(req.body).substring(0, 500));
+        return res.status(400).send(`<html><body><p style="color:red">Error: Faltan los parámetros del editor (params o library).</p><pre>${JSON.stringify(req.body).substring(0,500)}</pre></body></html>`);
       }
 
       const newContentId = await h5pEditor.saveOrUpdateContent(
@@ -426,21 +443,23 @@ async function initAndMount() {
         library,
         user
       );
+
+      console.log('[H5P POST] Guardado exitoso, contentId:', newContentId);
       
       // Devolver HTML con script para notificar al padre React
-      res.status(200).send(`
-        <html><body>
-          <script>
+      res.status(200).send(`<!DOCTYPE html><html><body>
+        <script>
+          try {
             window.parent.postMessage(JSON.stringify({
               context: 'h5p',
               action: 'saved',
               contentId: '${newContentId}'
             }), '*');
-            // Opcional: recargar el editor
-            window.location.href = '/h5p/editor/${newContentId}?cb=' + Date.now();
-          </script>
-        </body></html>
-      `);
+          } catch(e) {}
+          window.location.href = '/h5p/editor/${newContentId}?cb=' + Date.now();
+        </script>
+        <p>Guardado. ContentId: ${newContentId}</p>
+      </body></html>`);
     } catch (err: any) {
       console.error('[Save error]', err.message);
       res.status(500).send(`<html><body><p style="color:red">Error: ${err.message}</p></body></html>`);
