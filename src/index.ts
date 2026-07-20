@@ -451,6 +451,18 @@ async function initAndMount() {
         // en un iframe de otro dominio. Lo removemos.
         let safeModel = model.replace('parent.H5PIntegration ||', '');
         
+        // 1. Crear el backup de la variable
+        safeModel = safeModel.replace(
+          /(window\.H5PIntegration\s*=\s*[\s\S]+?\}[\s\n]*)(<\/script>)/,
+          '$1;\nwindow.__MY_H5P_BACKUP = JSON.parse(JSON.stringify(window.H5PIntegration));\n$2'
+        );
+
+        // 2. Restaurar el backup DESPUÉS de que h5peditor.js destruya la variable
+        safeModel = safeModel.replace(
+          /(<script src="[^"]*h5peditor\.js[^"]*"><\/script>)/,
+          '$1\n<script>Object.assign(window.H5PIntegration, window.__MY_H5P_BACKUP);</script>'
+        );
+        
         const CUSTOM_CSS = `
           <style>
             #save-h5p {

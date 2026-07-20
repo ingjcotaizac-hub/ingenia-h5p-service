@@ -1,0 +1,1181 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<script> window.H5PIntegration =  {
+  "ajax": {
+    "contentUserData": "https://ingenia-h5p-service-production.up.railway.app/contentUserData/:contentId/:dataType/:subContentId",
+    "setFinished": "https://ingenia-h5p-service-production.up.railway.app/finishedData"
+  },
+  "ajaxPath": "https://ingenia-h5p-service-production.up.railway.app/ajax?action=",
+  "editor": {
+    "ajaxPath": "https://ingenia-h5p-service-production.up.railway.app/ajax?action=",
+    "apiVersion": {
+      "majorVersion": 1,
+      "minorVersion": 27
+    },
+    "assets": {
+      "css": [
+        "https://ingenia-h5p-service-production.up.railway.app/core/styles/h5p.css?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/core/styles/h5p-confirmation-dialog.css?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/core/styles/h5p-core-button.css?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/libs/cropper.css?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/styles/css/h5p-hub-client.css?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/styles/css/fonts.css?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/styles/css/application.css?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/styles/css/libs/zebra_datepicker.min.css?version=1.27.0"
+      ],
+      "js": [
+        "https://ingenia-h5p-service-production.up.railway.app/core/js/jquery.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/core/js/h5p.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-event-dispatcher.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-x-api-event.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-x-api.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-content-type.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-confirmation-dialog.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-action-bar.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-editor.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/language/es.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5p-hub-client.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-semantic-structure.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-library-selector.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-fullscreen-bar.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-form.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-text.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-html.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-number.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-textarea.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-file-uploader.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-file.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-image.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-image-popup.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-av.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-group.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-boolean.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-list.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-list-editor.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-library.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-library-list-cache.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-select.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-selector-hub.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-selector-legacy.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-dimensions.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-coordinates.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-none.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-metadata.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-metadata-author-widget.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-metadata-changelog-widget.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-pre-save.js?version=1.27.0",
+        "https://ingenia-h5p-service-production.up.railway.app/editor/ckeditor/ckeditor.js?version=1.27.0"
+      ]
+    },
+    "copyrightSemantics": {
+      "name": "copyright",
+      "type": "group",
+      "label": "Copyright information",
+      "fields": [
+        {
+          "name": "title",
+          "type": "text",
+          "label": "Title",
+          "placeholder": "La Gioconda",
+          "optional": true
+        },
+        {
+          "name": "author",
+          "type": "text",
+          "label": "Author",
+          "placeholder": "Leonardo da Vinci",
+          "optional": true
+        },
+        {
+          "name": "year",
+          "type": "text",
+          "label": "Year(s)",
+          "placeholder": "1503 - 1517",
+          "optional": true
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "label": "Source",
+          "placeholder": "http://en.wikipedia.org/wiki/Mona_Lisa",
+          "optional": true,
+          "regexp": {
+            "pattern": "^http[s]?://.+",
+            "modifiers": "i"
+          }
+        },
+        {
+          "name": "license",
+          "type": "select",
+          "label": "License",
+          "default": "U",
+          "options": [
+            {
+              "value": "U",
+              "label": "Undisclosed"
+            },
+            {
+              "value": "CC BY",
+              "label": "Attribution",
+              "versions": [
+                {
+                  "value": "4.0",
+                  "label": "4.0 International"
+                },
+                {
+                  "value": "3.0",
+                  "label": "3.0 Unported"
+                },
+                {
+                  "value": "2.5",
+                  "label": "2.5 Generic"
+                },
+                {
+                  "value": "2.0",
+                  "label": "2.0 Generic"
+                },
+                {
+                  "value": "1.0",
+                  "label": "1.0 Generic"
+                }
+              ]
+            },
+            {
+              "value": "CC BY-SA",
+              "label": "Attribution-ShareAlike",
+              "versions": [
+                {
+                  "value": "4.0",
+                  "label": "4.0 International"
+                },
+                {
+                  "value": "3.0",
+                  "label": "3.0 Unported"
+                },
+                {
+                  "value": "2.5",
+                  "label": "2.5 Generic"
+                },
+                {
+                  "value": "2.0",
+                  "label": "2.0 Generic"
+                },
+                {
+                  "value": "1.0",
+                  "label": "1.0 Generic"
+                }
+              ]
+            },
+            {
+              "value": "CC BY-ND",
+              "label": "Attribution-NoDerivs",
+              "versions": [
+                {
+                  "value": "4.0",
+                  "label": "4.0 International"
+                },
+                {
+                  "value": "3.0",
+                  "label": "3.0 Unported"
+                },
+                {
+                  "value": "2.5",
+                  "label": "2.5 Generic"
+                },
+                {
+                  "value": "2.0",
+                  "label": "2.0 Generic"
+                },
+                {
+                  "value": "1.0",
+                  "label": "1.0 Generic"
+                }
+              ]
+            },
+            {
+              "value": "CC BY-NC",
+              "label": "Attribution-NonCommercial",
+              "versions": [
+                {
+                  "value": "4.0",
+                  "label": "4.0 International"
+                },
+                {
+                  "value": "3.0",
+                  "label": "3.0 Unported"
+                },
+                {
+                  "value": "2.5",
+                  "label": "2.5 Generic"
+                },
+                {
+                  "value": "2.0",
+                  "label": "2.0 Generic"
+                },
+                {
+                  "value": "1.0",
+                  "label": "1.0 Generic"
+                }
+              ]
+            },
+            {
+              "value": "CC BY-NC-SA",
+              "label": "Attribution-NonCommercial-ShareAlike",
+              "versions": [
+                {
+                  "value": "4.0",
+                  "label": "4.0 International"
+                },
+                {
+                  "value": "3.0",
+                  "label": "3.0 Unported"
+                },
+                {
+                  "value": "2.5",
+                  "label": "2.5 Generic"
+                },
+                {
+                  "value": "2.0",
+                  "label": "2.0 Generic"
+                },
+                {
+                  "value": "1.0",
+                  "label": "1.0 Generic"
+                }
+              ]
+            },
+            {
+              "value": "CC BY-NC-ND",
+              "label": "Attribution-NonCommercial-NoDerivs",
+              "versions": [
+                {
+                  "value": "4.0",
+                  "label": "4.0 International"
+                },
+                {
+                  "value": "3.0",
+                  "label": "3.0 Unported"
+                },
+                {
+                  "value": "2.5",
+                  "label": "2.5 Generic"
+                },
+                {
+                  "value": "2.0",
+                  "label": "2.0 Generic"
+                },
+                {
+                  "value": "1.0",
+                  "label": "1.0 Generic"
+                }
+              ]
+            },
+            {
+              "value": "GNU GPL",
+              "label": "General Public License",
+              "versions": [
+                {
+                  "value": "v3",
+                  "label": "Version 3"
+                },
+                {
+                  "value": "v2",
+                  "label": "Version 2"
+                },
+                {
+                  "value": "v1",
+                  "label": "Version 1"
+                }
+              ]
+            },
+            {
+              "value": "PD",
+              "label": "Public Domain",
+              "versions": [
+                {
+                  "value": "-",
+                  "label": "-"
+                },
+                {
+                  "value": "CC0 1.0",
+                  "label": "CC0 1.0 Universal"
+                },
+                {
+                  "value": "CC PDM",
+                  "label": "Public Domain Mark"
+                }
+              ]
+            },
+            {
+              "value": "C",
+              "label": "Copyright"
+            }
+          ]
+        },
+        {
+          "name": "version",
+          "type": "select",
+          "label": "License Version",
+          "options": []
+        }
+      ]
+    },
+    "fileIcon": {
+      "path": "https://ingenia-h5p-service-production.up.railway.app/editor/images/binary-file.png?version=1.27.0",
+      "height": 100,
+      "width": 100
+    },
+    "filesPath": "https://ingenia-h5p-service-production.up.railway.app/temp-files",
+    "libraryUrl": "https://ingenia-h5p-service-production.up.railway.app/editor/",
+    "metadataSemantics": [
+      {
+        "name": "title",
+        "type": "text",
+        "label": "Title",
+        "placeholder": "La Gioconda"
+      },
+      {
+        "name": "a11yTitle",
+        "type": "text",
+        "label": "Assistive Technologies label",
+        "optional": true
+      },
+      {
+        "name": "license",
+        "type": "select",
+        "label": "License",
+        "default": "U",
+        "options": [
+          {
+            "value": "U",
+            "label": "Undisclosed"
+          },
+          {
+            "type": "optgroup",
+            "label": "Creative Commons",
+            "options": [
+              {
+                "value": "CC BY",
+                "label": "Attribution (CC BY)",
+                "versions": [
+                  {
+                    "value": "4.0",
+                    "label": "4.0 International"
+                  },
+                  {
+                    "value": "3.0",
+                    "label": "3.0 Unported"
+                  },
+                  {
+                    "value": "2.5",
+                    "label": "2.5 Generic"
+                  },
+                  {
+                    "value": "2.0",
+                    "label": "2.0 Generic"
+                  },
+                  {
+                    "value": "1.0",
+                    "label": "1.0 Generic"
+                  }
+                ]
+              },
+              {
+                "value": "CC BY-SA",
+                "label": "Attribution-ShareAlike (CC BY-SA)",
+                "versions": [
+                  {
+                    "value": "4.0",
+                    "label": "4.0 International"
+                  },
+                  {
+                    "value": "3.0",
+                    "label": "3.0 Unported"
+                  },
+                  {
+                    "value": "2.5",
+                    "label": "2.5 Generic"
+                  },
+                  {
+                    "value": "2.0",
+                    "label": "2.0 Generic"
+                  },
+                  {
+                    "value": "1.0",
+                    "label": "1.0 Generic"
+                  }
+                ]
+              },
+              {
+                "value": "CC BY-ND",
+                "label": "Attribution-NoDerivs (CC BY-ND)",
+                "versions": [
+                  {
+                    "value": "4.0",
+                    "label": "4.0 International"
+                  },
+                  {
+                    "value": "3.0",
+                    "label": "3.0 Unported"
+                  },
+                  {
+                    "value": "2.5",
+                    "label": "2.5 Generic"
+                  },
+                  {
+                    "value": "2.0",
+                    "label": "2.0 Generic"
+                  },
+                  {
+                    "value": "1.0",
+                    "label": "1.0 Generic"
+                  }
+                ]
+              },
+              {
+                "value": "CC BY-NC",
+                "label": "Attribution-NonCommercial (CC BY-NC)",
+                "versions": [
+                  {
+                    "value": "4.0",
+                    "label": "4.0 International"
+                  },
+                  {
+                    "value": "3.0",
+                    "label": "3.0 Unported"
+                  },
+                  {
+                    "value": "2.5",
+                    "label": "2.5 Generic"
+                  },
+                  {
+                    "value": "2.0",
+                    "label": "2.0 Generic"
+                  },
+                  {
+                    "value": "1.0",
+                    "label": "1.0 Generic"
+                  }
+                ]
+              },
+              {
+                "value": "CC BY-NC-SA",
+                "label": "Attribution-NonCommercial-ShareAlike (CC BY-NC-SA)",
+                "versions": [
+                  {
+                    "value": "4.0",
+                    "label": "4.0 International"
+                  },
+                  {
+                    "value": "3.0",
+                    "label": "3.0 Unported"
+                  },
+                  {
+                    "value": "2.5",
+                    "label": "2.5 Generic"
+                  },
+                  {
+                    "value": "2.0",
+                    "label": "2.0 Generic"
+                  },
+                  {
+                    "value": "1.0",
+                    "label": "1.0 Generic"
+                  }
+                ]
+              },
+              {
+                "value": "CC BY-NC-ND",
+                "label": "Attribution-NonCommercial-NoDerivs (CC BY-NC-ND)",
+                "versions": [
+                  {
+                    "value": "4.0",
+                    "label": "4.0 International"
+                  },
+                  {
+                    "value": "3.0",
+                    "label": "3.0 Unported"
+                  },
+                  {
+                    "value": "2.5",
+                    "label": "2.5 Generic"
+                  },
+                  {
+                    "value": "2.0",
+                    "label": "2.0 Generic"
+                  },
+                  {
+                    "value": "1.0",
+                    "label": "1.0 Generic"
+                  }
+                ]
+              },
+              {
+                "value": "CC0 1.0",
+                "label": "Public Domain Dedication (CC0)"
+              },
+              {
+                "value": "CC PDM",
+                "label": "Public Domain Mark (PDM)"
+              }
+            ]
+          },
+          {
+            "value": "GNU GPL",
+            "label": "General Public License v3"
+          },
+          {
+            "value": "PD",
+            "label": "Public Domain"
+          },
+          {
+            "value": "ODC PDDL",
+            "label": "Public Domain Dedication and Licence"
+          },
+          {
+            "value": "C",
+            "label": "Copyright"
+          }
+        ]
+      },
+      {
+        "name": "licenseVersion",
+        "type": "select",
+        "label": "License Version",
+        "options": [
+          {
+            "value": "4.0",
+            "label": "4.0 International"
+          },
+          {
+            "value": "3.0",
+            "label": "3.0 Unported"
+          },
+          {
+            "value": "2.5",
+            "label": "2.5 Generic"
+          },
+          {
+            "value": "2.0",
+            "label": "2.0 Generic"
+          },
+          {
+            "value": "1.0",
+            "label": "1.0 Generic"
+          }
+        ],
+        "optional": true
+      },
+      {
+        "name": "yearFrom",
+        "type": "number",
+        "label": "Years (from)",
+        "placeholder": "1991",
+        "min": "-9999",
+        "max": "9999",
+        "optional": true
+      },
+      {
+        "name": "yearTo",
+        "type": "number",
+        "label": "Years (to)",
+        "placeholder": "1992",
+        "min": "-9999",
+        "max": "9999",
+        "optional": true
+      },
+      {
+        "name": "source",
+        "type": "text",
+        "label": "Source",
+        "placeholder": "https://",
+        "optional": true
+      },
+      {
+        "name": "authors",
+        "type": "list",
+        "field": {
+          "name": "author",
+          "type": "group",
+          "fields": [
+            {
+              "label": "Author's name",
+              "name": "name",
+              "optional": true,
+              "type": "text"
+            },
+            {
+              "name": "role",
+              "type": "select",
+              "label": "Author's role",
+              "default": "Author",
+              "options": [
+                {
+                  "value": "Author",
+                  "label": "Author"
+                },
+                {
+                  "value": "Editor",
+                  "label": "Editor"
+                },
+                {
+                  "value": "Licensee",
+                  "label": "Licensee"
+                },
+                {
+                  "value": "Originator",
+                  "label": "Originator"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "licenseExtras",
+        "type": "text",
+        "widget": "textarea",
+        "label": "License Extras",
+        "optional": true,
+        "description": "Any additional information about the license"
+      },
+      {
+        "name": "changes",
+        "type": "list",
+        "field": {
+          "name": "change",
+          "type": "group",
+          "label": "Changelog",
+          "fields": [
+            {
+              "name": "date",
+              "type": "text",
+              "label": "Date",
+              "optional": true
+            },
+            {
+              "name": "author",
+              "type": "text",
+              "label": "Changed by",
+              "optional": true
+            },
+            {
+              "name": "log",
+              "type": "text",
+              "widget": "textarea",
+              "label": "Description of change",
+              "placeholder": "Photo cropped, text changed, etc.",
+              "optional": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "authorComments",
+        "type": "text",
+        "widget": "textarea",
+        "label": "Author comments",
+        "description": "Comments for the editor of the content (This text will not be published as a part of copyright info)",
+        "optional": true
+      },
+      {
+        "name": "contentType",
+        "type": "text",
+        "widget": "none"
+      }
+    ],
+    "nodeVersionId": "2243903146",
+    "language": "es",
+    "hub": {
+      "contentSearchUrl": "https://hub-api.h5p.org/v1/contents/search"
+    },
+    "enableContentHub": false
+  },
+  "hubIsEnabled": true,
+  "l10n": {
+    "H5P": {
+      "fullscreen": "Fullscreen",
+      "disableFullscreen": "Disable fullscreen",
+      "download": "Download",
+      "copyrights": "Rights of use",
+      "embed": "Embed",
+      "size": "Size",
+      "showAdvanced": "Show advanced",
+      "hideAdvanced": "Hide advanced",
+      "advancedHelp": "Include this script on your website if you want dynamic sizing of the embedded content:",
+      "copyrightInformation": "Rights of use",
+      "close": "Close",
+      "title": "Title",
+      "author": "Author",
+      "year": "Year",
+      "source": "Source",
+      "license": "License",
+      "thumbnail": "Thumbnail",
+      "noCopyrights": "No copyright information available for this content.",
+      "reuse": "Reuse",
+      "reuseContent": "Reuse Content",
+      "reuseDescription": "Reuse this content.",
+      "downloadDescription": "Download this content as a H5P file.",
+      "copyrightsDescription": "View copyright information for this content.",
+      "embedDescription": "View the embed code for this content.",
+      "h5pDescription": "Visit H5P.org to check out more cool content.",
+      "contentChanged": "This content has changed since you last used it.",
+      "startingOver": "You'll be starting over.",
+      "by": "by",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "subLevel": "Sublevel",
+      "confirmDialogHeader": "Confirm action",
+      "confirmDialogBody": "Please confirm that you wish to proceed. This action is not reversible.",
+      "cancelLabel": "Cancel",
+      "confirmLabel": "Confirm",
+      "licenseU": "Undisclosed",
+      "licenseCCBY": "Attribution",
+      "licenseCCBYSA": "Attribution-ShareAlike",
+      "licenseCCBYND": "Attribution-NoDerivs",
+      "licenseCCBYNC": "Attribution-NonCommercial",
+      "licenseCCBYNCSA": "Attribution-NonCommercial-ShareAlike",
+      "licenseCCBYNCND": "Attribution-NonCommercial-NoDerivs",
+      "licenseCC40": "4.0 International",
+      "licenseCC30": "3.0 Unported",
+      "licenseCC25": "2.5 Generic",
+      "licenseCC20": "2.0 Generic",
+      "licenseCC10": "1.0 Generic",
+      "licenseGPL": "General Public License",
+      "licenseV3": "Version 3",
+      "licenseV2": "Version 2",
+      "licenseV1": "Version 1",
+      "licensePD": "Public Domain",
+      "licenseCC010": "CC0 1.0 Universal (CC0 1.0) Public Domain Dedication",
+      "licensePDM": "Public Domain Mark",
+      "licenseC": "Copyright",
+      "contentType": "Content Type",
+      "licenseExtras": "License Extras",
+      "changes": "Changelog",
+      "contentCopied": "Content is copied to the clipboard",
+      "connectionLost": "Connection lost. Results will be stored and sent when you regain connection.",
+      "connectionReestablished": "Connection reestablished.",
+      "resubmitScores": "Attempting to submit stored results.",
+      "offlineDialogHeader": "Your connection to the server was lost",
+      "offlineDialogBody": "We were unable to send information about your completion of this task. Please check your internet connection.",
+      "offlineDialogRetryMessage": "Retrying in :num....",
+      "offlineDialogRetryButtonLabel": "Retry now",
+      "offlineSuccessfulSubmit": "Successfully submitted results.",
+      "mainTitle": "Sharing <strong>:title</strong>",
+      "editInfoTitle": "Edit info for <strong>:title</strong>",
+      "cancel": "Cancel",
+      "back": "Back",
+      "next": "Next",
+      "reviewInfo": "Review info",
+      "share": "Share",
+      "saveChanges": "Save changes",
+      "registerOnHub": "Register on the H5P Hub",
+      "updateRegistrationOnHub": "Save account settings",
+      "requiredInfo": "Required Info",
+      "optionalInfo": "Optional Info",
+      "reviewAndShare": "Review & Share",
+      "reviewAndSave": "Review & Save",
+      "shared": "Shared",
+      "currentStep": "Step :step of :total",
+      "sharingNote": "All content details can be edited after sharing",
+      "licenseDescription": "Select a license for your content",
+      "licenseVersion": "License Version",
+      "licenseVersionDescription": "Select a license version",
+      "disciplineLabel": "Disciplines",
+      "disciplineDescription": "You can select multiple disciplines",
+      "disciplineLimitReachedMessage": "You can select up to :numDisciplines disciplines",
+      "discipline": {
+        "searchPlaceholder": "Type to search for disciplines",
+        "in": "in",
+        "dropdownButton": "Dropdown button"
+      },
+      "removeChip": "Remove :chip from the list",
+      "keywordsPlaceholder": "Add keywords",
+      "keywords": "Keywords",
+      "keywordsDescription": "You can add multiple keywords separated by commas. Press \"Enter\" or \"Add\" to confirm keywords",
+      "altText": "Alt text",
+      "reviewMessage": "Please review the info below before you share",
+      "subContentWarning": "Sub-content (images, questions etc.) will be shared under :license unless otherwise specified in the authoring tool",
+      "disciplines": "Disciplines",
+      "shortDescription": "Short description",
+      "longDescription": "Long description",
+      "icon": "Icon",
+      "screenshots": "Screenshots",
+      "helpChoosingLicense": "Help me choose a license",
+      "shareFailed": "Share failed.",
+      "editingFailed": "Editing failed.",
+      "shareTryAgain": "Something went wrong, please try to share again.",
+      "pleaseWait": "Please wait...",
+      "language": "Language",
+      "level": "Level",
+      "shortDescriptionPlaceholder": "Short description of your content",
+      "longDescriptionPlaceholder": "Long description of your content",
+      "description": "Description",
+      "iconDescription": "640x480px. If not selected content will use category icon",
+      "screenshotsDescription": "Add up to five screenshots of your content",
+      "submitted": "Submitted!",
+      "isNowSubmitted": "Is now submitted to H5P Hub",
+      "changeHasBeenSubmitted": "A change has been submited for",
+      "contentAvailable": "Your content will normally be available in the Hub within one business day.",
+      "contentUpdateSoon": "Your content will update soon",
+      "contentLicenseTitle": "Content License Info",
+      "licenseDialogDescription": "Click on a specific license to get info about proper usage",
+      "publisherFieldTitle": "Publisher",
+      "publisherFieldDescription": "This will display as the \"Publisher name\" on shared content",
+      "emailAddress": "Email Address",
+      "publisherDescription": "Publisher description",
+      "publisherDescriptionText": "This will be displayed under \"Publisher info\" on shared content",
+      "contactPerson": "Contact Person",
+      "phone": "Phone",
+      "address": "Address",
+      "city": "City",
+      "zip": "Zip",
+      "country": "Country",
+      "logoUploadText": "Organization logo or avatar",
+      "acceptTerms": "I accept the <a href=':url' target='_blank'>terms of use</a>",
+      "successfullyRegistred": "You have successfully registered an account on the H5P Hub",
+      "successfullyRegistredDescription": "You account details can be changed",
+      "successfullyUpdated": "Your H5P Hub account settings have successfully been changed",
+      "accountDetailsLinkText": "here",
+      "registrationTitle": "H5P Hub Registration",
+      "registrationFailed": "An error occurred",
+      "registrationFailedDescription": "We were not able to create an account at this point. Something went wrong. Try again later.",
+      "maxLength": ":length is the maximum number of characters",
+      "keywordExists": "Keyword already exists!",
+      "licenseDetails": "License details",
+      "remove": "Remove",
+      "removeImage": "Remove image",
+      "cancelPublishConfirmationDialogTitle": "Cancel sharing",
+      "cancelPublishConfirmationDialogDescription": "Are you sure you want to cancel the sharing process?",
+      "cancelPublishConfirmationDialogCancelButtonText": "No",
+      "cancelPublishConfirmationDialogConfirmButtonText": "Yes",
+      "add": "Add",
+      "age": "Typical age",
+      "ageDescription": "The target audience of this content. Possible input formats separated by commas: \"1,34-45,-50,59-\".",
+      "invalidAge": "Invalid input format for Typical age. Possible input formats separated by commas: \"1, 34-45, -50, -59-\".",
+      "contactPersonDescription": "H5P will reach out to the contact person in case there are any issues with the content shared by the publisher. The contact person\"s name or other information will not be published or shared with third parties",
+      "emailAddressDescription": "The email address will be used by H5P to reach out to the publisher in case of any issues with the content or in case the publisher needs to recover their account. It will not be published or shared with any third parties",
+      "copyrightWarning": "Copyrighted material cannot be shared in the H5P Content Hub. If the content is licensed with a OER friendly license like Creative Commons, please choose the appropriate license. If not this content cannot be shared.",
+      "keywordsExits": "Keywords already exists!",
+      "someKeywordsExits": "Some of these keywords already exist",
+      "width": "width",
+      "height": "height",
+      "rotateLeft": "Rotate Left",
+      "rotateRight": "Rotate Right",
+      "cropImage": "Crop Image",
+      "confirmCrop": "Confirm Crop",
+      "cancelCrop": "Cancel Crop"
+    }
+  },
+  "postUserStatistics": true,
+  "saveFreq": 5,
+  "libraryUrl": "https://ingenia-h5p-service-production.up.railway.app/core/js",
+  "pluginCacheBuster": "?version=1.27.0",
+  "url": "https://ingenia-h5p-service-production.up.railway.app",
+  "fullscreenDisabled": 0,
+  "user": {
+    "mail": "anonymous@ingenia.lms",
+    "name": "Anonymous",
+    "id": "anonymous"
+  },
+  "Hub": {
+    "contentSearchUrl": "https://hub-api.h5p.org/v1/contents/search"
+  }
+}</script>
+<link rel="stylesheet" href="https://ingenia-h5p-service-production.up.railway.app/core/styles/h5p.css?version=1.27.0">
+    <link rel="stylesheet" href="https://ingenia-h5p-service-production.up.railway.app/core/styles/h5p-confirmation-dialog.css?version=1.27.0">
+    <link rel="stylesheet" href="https://ingenia-h5p-service-production.up.railway.app/core/styles/h5p-core-button.css?version=1.27.0">
+    <link rel="stylesheet" href="https://ingenia-h5p-service-production.up.railway.app/editor/libs/cropper.css?version=1.27.0">
+    <link rel="stylesheet" href="https://ingenia-h5p-service-production.up.railway.app/editor/styles/css/h5p-hub-client.css?version=1.27.0">
+    <link rel="stylesheet" href="https://ingenia-h5p-service-production.up.railway.app/editor/styles/css/fonts.css?version=1.27.0">
+    <link rel="stylesheet" href="https://ingenia-h5p-service-production.up.railway.app/editor/styles/css/application.css?version=1.27.0">
+    <link rel="stylesheet" href="https://ingenia-h5p-service-production.up.railway.app/editor/styles/css/libs/zebra_datepicker.min.css?version=1.27.0">
+<script src="https://ingenia-h5p-service-production.up.railway.app/core/js/jquery.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/core/js/h5p.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-event-dispatcher.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-x-api-event.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-x-api.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-content-type.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-confirmation-dialog.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/core/js/h5p-action-bar.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-editor.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/language/es.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5p-hub-client.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-semantic-structure.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-library-selector.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-fullscreen-bar.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-form.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-text.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-html.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-number.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-textarea.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-file-uploader.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-file.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-image.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-image-popup.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-av.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-group.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-boolean.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-list.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-list-editor.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-library.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-library-list-cache.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-select.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-selector-hub.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-selector-legacy.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-dimensions.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-coordinates.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-none.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-metadata.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-metadata-author-widget.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-metadata-changelog-widget.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/scripts/h5peditor-pre-save.js?version=1.27.0"></script>
+    <script src="https://ingenia-h5p-service-production.up.railway.app/editor/ckeditor/ckeditor.js?version=1.27.0"></script>
+</head>
+<body>
+
+<form method="post" enctype="multipart/form-data" id="h5p-content-form">
+    <div id="post-body-content">
+        <div class="h5p-create">
+            <div class="h5p-editor"></div>
+        </div>
+    </div>
+    <input id="save-h5p" type="submit" name="submit" value="Create" class="button button-primary button-large">
+</form>
+<script>
+var ns = H5PEditor;
+
+(function($) {
+    H5PEditor.init = function() {
+        H5PEditor.$ = H5P.jQuery;
+        H5PEditor.basePath = H5PIntegration.editor.libraryUrl;
+        H5PEditor.fileIcon = H5PIntegration.editor.fileIcon;
+        H5PEditor.ajaxPath = H5PIntegration.editor.ajaxPath;
+        H5PEditor.filesPath = H5PIntegration.editor.filesPath;
+        H5PEditor.apiVersion = H5PIntegration.editor.apiVersion;
+        H5PEditor.contentLanguage = H5PIntegration.editor.language;
+
+        // Semantics describing what copyright information can be stored for media.
+        H5PEditor.copyrightSemantics = H5PIntegration.editor.copyrightSemantics;
+        H5PEditor.metadataSemantics = H5PIntegration.editor.metadataSemantics;
+
+        // Required styles and scripts for the editor
+        H5PEditor.assets = H5PIntegration.editor.assets;
+
+        // Required for assets
+        H5PEditor.baseUrl = '';
+
+        if (H5PIntegration.editor.nodeVersionId !== undefined) {
+            H5PEditor.contentId = H5PIntegration.editor.nodeVersionId;
+        }
+
+        var h5peditor;
+        var $type = $('input[name="action"]');
+        var $upload = $('.h5p-upload');
+        var $create = $('.h5p-create').hide();
+        var $editor = $('.h5p-editor');
+        var $library = $('input[name="library"]');
+        var $params = $('input[name="parameters"]');
+        var library = $library.val();
+
+        // $type.change(function () {
+        //   if ($type.filter(':checked').val() === 'upload') {
+        //     $create.hide();
+        //     $upload.show();
+        //   }
+        //   else {
+        $upload.hide();
+        if (h5peditor === undefined) {
+            if(H5PEditor.contentId){
+                $.ajax({
+                    error: function(res) {
+                        h5peditor = new ns.Editor(undefined, undefined, $editor[0]);
+                        $create.show();
+                    },
+                    success: function(res) {
+                        h5peditor = new ns.Editor(
+                            res.library,
+                            JSON.stringify(res.params),
+                            $editor[0]
+                        );
+                        $create.show();
+                        // $type.change();
+                    },
+                    type: 'GET',
+                    url: 'https://ingenia-h5p-service-production.up.railway.app/params/' + H5PEditor.contentId + window.location.search
+                });
+            } else {
+                h5peditor = new ns.Editor(undefined, undefined, $editor[0]);
+                $create.show();
+            }
+        }
+        $create.show();
+        //   }
+        // });
+
+        if ($type.filter(':checked').val() === 'upload') {
+            $type.change();
+        } else {
+            $type
+                .filter('input[value="create"]')
+                .attr('checked', true)
+                .change();
+        }
+
+        var formIsSubmitting = false; // Prevents multiple submissions if
+        // users accidentally click on "save" twice.
+        $('#h5p-content-form').submit(function(event) {
+            if ($type.length && $type.filter(':checked').val() === 'upload') {
+              return; // Old file upload
+            }
+
+            if (h5peditor !== undefined && !formIsSubmitting) {
+                var params = h5peditor.getParams();
+
+                if (params.params !== undefined) {
+                    // Get content from editor (also validates the entered data 
+                    // and metadata and upgrades the parameters as side effects)
+                    h5peditor.getContent(function (content) {
+
+                      // Set main library
+                      $library.val(content.library);
+
+                      // Set params
+                      $params.val(content.params);
+
+                      // Submit form data
+                      formIsSubmitting = true;
+
+                      $.ajax({
+                          data: JSON.stringify({
+                              library: content.library,
+                              params: JSON.parse(content.params)
+                          }),
+                          headers: {
+                              'Content-Type': 'application/json'
+                          },
+                          type: 'POST'
+                      }).then((result) => {
+                          const parsedResult = JSON.parse(result)
+                          if(parsedResult.contentId) {
+                              window.location.href = 'https://ingenia-h5p-service-production.up.railway.app/play/' + parsedResult.contentId;
+                          }
+                      });
+                    });
+
+                    return event.preventDefault();
+                    // TODO - Calculate & set max score
+                    // $maxscore.val(h5peditor.getMaxScore(params.params));
+                }
+            }
+        });
+
+        // Title label
+        var $title = $('#h5p-content-form #title');
+        var $label = $title.prev();
+        $title
+            .focus(function() {
+                $label.addClass('screen-reader-text');
+            })
+            .blur(function() {
+                if ($title.val() === '') {
+                    $label.removeClass('screen-reader-text');
+                }
+            })
+            .focus();
+
+        // Delete confirm
+        $('.submitdelete').click(function() {
+            return confirm(H5PIntegration.editor.deleteMessage);
+        });
+    };
+
+    H5PEditor.getAjaxUrl = function(action, parameters) {
+        var url = H5PIntegration.editor.ajaxPath + action;
+
+        if (parameters !== undefined) {
+            for (var property in parameters) {
+                if (parameters.hasOwnProperty(property)) {
+                    url += '&' + property + '=' + parameters[property];
+                }
+            }
+        }
+
+        url += window.location.search.replace(/\?/g, '&');
+        return url;
+    };
+
+    H5PEditor.enableContentHub = H5PIntegration.editor.enableContentHub
+        || false;
+    
+    $(document).ready(H5PEditor.init);
+})(H5P.jQuery);
+</script>
+
+          <style>
+            #save-h5p {
+              background: #0ea5e9 !important;
+              color: white !important;
+              border: none !important;
+              padding: 12px 24px !important;
+              border-radius: 8px !important;
+              font-weight: 800 !important;
+              font-size: 14px !important;
+              cursor: pointer !important;
+              margin: 20px auto !important;
+              display: block !important;
+              width: 90% !important;
+              text-transform: uppercase !important;
+              transition: background 0.2s !important;
+            }
+            #save-h5p:hover { background: #0284c7 !important; }
+          </style>
+        
+          <script>
+            // Prevenir el POST nativo que causa el error 400 cuando la validación de H5P falla.
+            document.addEventListener('DOMContentLoaded', function() {
+              var form = document.getElementById('h5p-content-form');
+              if (form) {
+                form.addEventListener('submit', function(e) {
+                  if (window.h5peditor) {
+                    var params = window.h5peditor.getParams();
+                    if (!params || params.params === undefined) {
+                      e.preventDefault();
+                      alert('Por favor, selecciona un tipo de contenido o completa los campos requeridos antes de guardar.');
+                      return;
+                    }
+                  }
+                  // El script nativo (h5peditor.js) hace su propio AJAX si la validación pasa.
+                  // Siempre bloqueamos la navegación nativa.
+                  e.preventDefault();
+                });
+              }
+            });
+          </script>
+        
+<script>
+(function() {
+  var tries = 0;
+  var interval = setInterval(function() {
+    tries++;
+    if (tries > 120) { clearInterval(interval); return; }
+    if (window.H5PEditor && window.H5PEditor.instances && window.H5PEditor.instances.length > 0) {
+      clearInterval(interval);
+      var editor = window.H5PEditor.instances[0];
+      if (editor && editor.on) {
+        editor.on('save', function(contentId) {
+          window.parent.postMessage(JSON.stringify({
+            action: 'h5p-saved',
+            contentId: String(contentId || 'new')
+          }), '*');
+        });
+      }
+    }
+  }, 500);
+})();
+</script>
+</body>
+</html>
