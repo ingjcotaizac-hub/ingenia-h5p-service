@@ -383,7 +383,7 @@ async function initAndMount() {
             res.status(500).send(`<html><body><p style="color:red">Error: ${err.message}</p></body></html>`);
         }
     });
-    app.post('/h5p/editor/:contentId?', upload.any(), async (req, res) => {
+    app.post('/h5p/editor/:contentId?', async (req, res) => {
         try {
             const user = getH5PUser(req);
             const contentIdParam = req.params.contentId;
@@ -391,10 +391,10 @@ async function initAndMount() {
             let params = req.body.params?.params;
             let metadata = req.body.params?.metadata;
             let library = req.body.library;
-            // El editor envía los datos como "parameters" y "library" en multipart/form-data
+            // El editor envía los datos como "parameters" y "library" en urlencoded o json
             if (req.body.parameters) {
                 try {
-                    const parsed = JSON.parse(req.body.parameters);
+                    const parsed = typeof req.body.parameters === 'string' ? JSON.parse(req.body.parameters) : req.body.parameters;
                     params = parsed.params;
                     metadata = parsed.metadata;
                 }
@@ -403,7 +403,7 @@ async function initAndMount() {
                 }
             }
             if (!params || !library) {
-                return res.status(400).json({ error: 'Faltan los parámetros del editor (params o library). formData no fue procesada correctamente.' });
+                return res.status(400).send(`<html><body><p style="color:red">Error: Faltan los parámetros del editor (params o library).</p><pre>${JSON.stringify(req.body)}</pre></body></html>`);
             }
             const newContentId = await h5pEditor.saveOrUpdateContent(contentId ? String(contentId) : undefined, params, metadata, library, user);
             // Devolver HTML con script para notificar al padre React
