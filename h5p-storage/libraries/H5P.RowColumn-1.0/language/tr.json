@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Sütun İçerikler Listesi",
+      "entity": "content",
+      "field": {
+        "fields": [
+          {
+            "label": "İçerik"
+          }
+        ]
+      }
+    }
+  ]
+}

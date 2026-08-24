@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Veeru sisu loetelu",
+      "entity": "sisu",
+      "field": {
+        "fields": [
+          {
+            "label": "Sisu"
+          }
+        ]
+      }
+    }
+  ]
+}

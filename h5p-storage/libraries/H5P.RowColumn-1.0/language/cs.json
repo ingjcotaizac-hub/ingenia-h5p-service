@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Seznam obsahu sloupců",
+      "entity": "obsah",
+      "field": {
+        "fields": [
+          {
+            "label": "Obsah"
+          }
+        ]
+      }
+    }
+  ]
+}

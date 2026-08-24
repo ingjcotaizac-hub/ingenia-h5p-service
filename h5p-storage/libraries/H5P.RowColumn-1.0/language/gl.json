@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Listado do Contido da Columna",
+      "entity": "contido",
+      "field": {
+        "fields": [
+          {
+            "label": "Contido"
+          }
+        ]
+      }
+    }
+  ]
+}

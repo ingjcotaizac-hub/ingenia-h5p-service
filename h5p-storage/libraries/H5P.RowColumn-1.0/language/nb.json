@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Liste med kolonneinnhold",
+      "entity": "innhold",
+      "field": {
+        "fields": [
+          {
+            "label": "Innhold"
+          }
+        ]
+      }
+    }
+  ]
+}

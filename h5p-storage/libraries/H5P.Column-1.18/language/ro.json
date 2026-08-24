@@ -1,0 +1,29 @@
+{
+  "semantics": [
+    {
+      "label": "Listă de conținut în coloană",
+      "entity": "conținut",
+      "field": {
+        "fields": [
+          {
+            "label": "Conținut"
+          },
+          {
+            "label": "Separă conținutul cu o linie orizontală",
+            "options": [
+              {
+                "label": "Automat (implicit)"
+              },
+              {
+                "label": "Nu utiliza niciodată linie deasupra"
+              },
+              {
+                "label": "Utilizează întotdeauna linie deasupra"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

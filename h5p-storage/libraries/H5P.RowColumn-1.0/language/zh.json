@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "欄位內容",
+      "entity": "content",
+      "field": {
+        "fields": [
+          {
+            "label": "內容"
+          }
+        ]
+      }
+    }
+  ]
+}

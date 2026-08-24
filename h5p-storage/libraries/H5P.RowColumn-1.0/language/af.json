@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Lys van kolominhoud",
+      "entity": "inhoud",
+      "field": {
+        "fields": [
+          {
+            "label": "Inhoud"
+          }
+        ]
+      }
+    }
+  ]
+}

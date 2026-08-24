@@ -1,5 +1,13 @@
 node_modules/
 
 .env
-h5p-storage/
-*.log[gitignore] h5p-repo  
+
+# h5p-storage: se excluyen los datos dinámicos (contenido de usuarios, temporales, config)
+# Las librerías (código AGPL open-source de h5p.org) SÍ se versionan para
+# garantizar builds reproducibles en Render sin depender del Hub H5P en build time.
+h5p-storage/content/
+h5p-storage/scorm/
+h5p-storage/tmp/
+h5p-storage/config/
+
+*.log

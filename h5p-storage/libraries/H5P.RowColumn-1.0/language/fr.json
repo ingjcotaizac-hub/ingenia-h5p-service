@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Liste des contenus empilés",
+      "entity": "contenu",
+      "field": {
+        "fields": [
+          {
+            "label": "Contenu"
+          }
+        ]
+      }
+    }
+  ]
+}

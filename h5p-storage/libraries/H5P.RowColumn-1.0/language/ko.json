@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "열(column)로된 콘텐츠 목록",
+      "entity": " 콘텐츠",
+      "field": {
+        "fields": [
+          {
+            "label": "콘텐츠"
+          }
+        ]
+      }
+    }
+  ]
+}

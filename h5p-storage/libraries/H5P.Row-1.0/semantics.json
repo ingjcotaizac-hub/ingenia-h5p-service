@@ -1,0 +1,32 @@
+[
+  {
+    "name": "columns",
+    "type": "list",
+    "label": "Columns",
+    "importance": "high",
+    "max": 4,
+    "field": {
+      "name": "column",
+      "type": "group",
+      "importance": "high",
+      "fields": [
+        {
+          "name": "width",
+          "label": "Width",
+          "type": "number",
+          "description": "Column width in percentage.",
+          "optional": true,
+          "max": 100
+        },
+        {
+          "name": "content",
+          "label": "Column",
+          "type": "library",
+          "options": [
+            "H5P.RowColumn 1.0"
+          ]
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Zutabearen edukiaren zerrenda",
+      "entity": "edukia",
+      "field": {
+        "fields": [
+          {
+            "label": "Edukia"
+          }
+        ]
+      }
+    }
+  ]
+}

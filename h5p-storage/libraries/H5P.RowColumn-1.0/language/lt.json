@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Stulpelio turinio sąrašas",
+      "entity": "turinys",
+      "field": {
+        "fields": [
+          {
+            "label": "Turinys"
+          }
+        ]
+      }
+    }
+  ]
+}

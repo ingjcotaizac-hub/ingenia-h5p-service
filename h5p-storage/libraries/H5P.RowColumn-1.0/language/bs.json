@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "lista sadržaja stupca",
+      "entity": "sadržaj",
+      "field": {
+        "fields": [
+          {
+            "label": "Sadržaj"
+          }
+        ]
+      }
+    }
+  ]
+}

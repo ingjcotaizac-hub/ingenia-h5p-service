@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Osiot",
+      "entity": "osio",
+      "field": {
+        "fields": [
+          {
+            "label": "Osion sisältö"
+          }
+        ]
+      }
+    }
+  ]
+}

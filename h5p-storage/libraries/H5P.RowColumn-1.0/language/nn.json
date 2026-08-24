@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "List of Column Content",
+      "entity": "content",
+      "field": {
+        "fields": [
+          {
+            "label": "Content"
+          }
+        ]
+      }
+    }
+  ]
+}

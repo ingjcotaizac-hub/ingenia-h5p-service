@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Seznam vsebine stolpca",
+      "entity": "vsebina",
+      "field": {
+        "fields": [
+          {
+            "label": "Vsebina"
+          }
+        ]
+      }
+    }
+  ]
+}

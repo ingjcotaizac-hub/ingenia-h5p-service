@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Lijst met kolominhoud",
+      "entity": "inhoud",
+      "field": {
+        "fields": [
+          {
+            "label": "Inhoud"
+          }
+        ]
+      }
+    }
+  ]
+}

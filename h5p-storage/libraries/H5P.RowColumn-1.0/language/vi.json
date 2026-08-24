@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Danh sách nội dung của Cột",
+      "entity": "nội dung",
+      "field": {
+        "fields": [
+          {
+            "label": "Nội dung"
+          }
+        ]
+      }
+    }
+  ]
+}

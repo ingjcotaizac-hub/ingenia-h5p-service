@@ -1,0 +1,29 @@
+{
+  "semantics": [
+    {
+      "label": "Liste med kolonneinnhald",
+      "entity": "innhald",
+      "field": {
+        "fields": [
+          {
+            "label": "Innhald"
+          },
+          {
+            "label": "Skil ut innhald med ei horisontal linje",
+            "options": [
+              {
+                "label": "Automatisk (standard)"
+              },
+              {
+                "label": "Aldri bruk linje over"
+              },
+              {
+                "label": "Alltid bruk linje over"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

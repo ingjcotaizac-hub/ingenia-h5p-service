@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Kolonnu satura saraksts",
+      "entity": "saturs",
+      "field": {
+        "fields": [
+          {
+            "label": "Saturs"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "semantics": [
+    {
+      "label": "Rhestr o Gynnwys y Golofn",
+      "entity": "cynnwys",
+      "field": {
+        "fields": [
+          {
+            "label": "Cynnwys"
+          }
+        ]
+      }
+    }
+  ]
+}
