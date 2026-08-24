@@ -434,7 +434,7 @@ H5P.getHeadTags = function (contentId) {
          createStyleTags(H5PIntegration.contents['cid-' + contentId].styles) +
          createScriptTags(H5PIntegration.core.scripts) +
          createScriptTags(H5PIntegration.contents['cid-' + contentId].scripts) +
-         '<script>H5PIntegration = (function(){try{return window.parent.H5PIntegration;}catch(e){return undefined;}})(); var H5P = H5P || {}; H5P.externalEmbed = false;</script>';
+         '<script>H5PIntegration = (function(){try{return (function(){try{return (function(){try{return (function(){try{return window.parent.H5PIntegration;}catch(e){return undefined;}})();}catch(e){return undefined;}})();}catch(e){return undefined;}})();}catch(e){return undefined;}})(); var H5P = H5P || {}; H5P.externalEmbed = false;</script>';
 };
 
 /**

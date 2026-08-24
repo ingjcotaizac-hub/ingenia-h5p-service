@@ -215,3 +215,93 @@ export async function uploadDirectoryToR2(
   await uploadDir(localDir, r2Prefix);
   return { uploaded, errors };
 }
+
+/**
+ * Restaura un directorio desde R2 hacia el disco local si existe.
+ */
+export async function restoreDirectoryFromR2(
+  r2Prefix: string,
+  localDir: string,
+  config: R2Config
+): Promise<boolean> {
+  try {
+    const region  = 'auto';
+    const service = 's3';
+    const host    = `${config.accountId}.r2.cloudflarestorage.com`;
+    const canonicalUri = `/${config.bucketName}`;
+    const canonicalQuery = `list-type=2&prefix=${encodeURIComponent(r2Prefix)}`;
+
+    const now       = new Date();
+    const amzDate   = now.toISOString().replace(/[:\-]|\.\d{3}/g, '').slice(0, 15) + 'Z';
+    const dateStamp = amzDate.slice(0, 8);
+
+    const payloadHash = sha256hex('');
+    const canonicalHeaders =
+      `host:${host}\n` +
+      `x-amz-content-sha256:${payloadHash}\n` +
+      `x-amz-date:${amzDate}\n`;
+    const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
+
+    const canonicalRequest = [
+      'GET',
+      canonicalUri,
+      canonicalQuery,
+      canonicalHeaders,
+      signedHeaders,
+      payloadHash
+    ].join('\n');
+
+    const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
+    const stringToSign = [
+      'AWS4-HMAC-SHA256',
+      amzDate,
+      credentialScope,
+      sha256hex(canonicalRequest)
+    ].join('\n');
+
+    const signingKey = derivedSigningKey(config.secretAccessKey, dateStamp, region, service);
+    const signature  = hmacSha256(signingKey, stringToSign).toString('hex');
+
+    const authHeader =
+      `AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${credentialScope}, ` +
+      `SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+    const url = `https://${host}${canonicalUri}?${canonicalQuery}`;
+    const response = await fetch(url, {
+      headers: {
+        'Host': host,
+        'x-amz-date': amzDate,
+        'x-amz-content-sha256': payloadHash,
+        'Authorization': authHeader,
+      }
+    });
+
+    if (!response.ok) return false;
+    const text = await response.text();
+    
+    // Parse keys from XML
+    const keyMatches = [...text.matchAll(/<Key>([^<]+)<\/Key>/g)].map(m => m[1]);
+    if (keyMatches.length === 0) return false;
+
+    fs.mkdirSync(localDir, { recursive: true });
+
+    for (const key of keyMatches) {
+      const relativePath = key.substring(r2Prefix.length + 1);
+      const targetFilePath = path.join(localDir, relativePath);
+      fs.mkdirSync(path.dirname(targetFilePath), { recursive: true });
+
+      const fileUrl = `${config.publicUrl}/${key}`;
+      const fileRes = await fetch(fileUrl);
+      if (fileRes.ok) {
+        const buf = Buffer.from(await fileRes.arrayBuffer());
+        fs.writeFileSync(targetFilePath, buf);
+      }
+    }
+
+    return fs.existsSync(path.join(localDir, 'h5p.json')) && fs.existsSync(path.join(localDir, 'content.json'));
+  } catch (err: any) {
+    console.warn('[R2 Restore] Error restaurando desde R2:', err.message);
+    return false;
+  }
+}
+

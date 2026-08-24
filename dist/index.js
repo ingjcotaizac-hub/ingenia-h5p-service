@@ -48,12 +48,13 @@ const extract_zip_1 = __importDefault(require("extract-zip"));
 const crypto_1 = __importDefault(require("crypto"));
 const oauth_1_0a_1 = __importDefault(require("oauth-1.0a"));
 const xml2js_1 = require("xml2js");
+const r2Helper_1 = require("./r2Helper");
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
     limits: { fileSize: 250 * 1024 * 1024 } // 250 MB
 });
 const PORT = process.env.PORT || 3001;
-const H5P_ROOT = process.env.H5P_ROOT || path_1.default.join(process.cwd(), 'h5p-storage');
+const H5P_ROOT = path_1.default.resolve(process.env.H5P_ROOT || path_1.default.join(process.cwd(), 'h5p-storage'));
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -167,6 +168,21 @@ app.post('/upload-scorm', upload.single('file'), async (req, res) => {
         // Extract zip
         await (0, extract_zip_1.default)(tempZipPath, { dir: scormDir });
         fs_1.default.unlinkSync(tempZipPath);
+        // Subir contenido SCORM a R2 en background para persistencia entre reinicios.
+        // Fire-and-forget: no bloquea la respuesta al cliente.
+        const r2Config = (0, r2Helper_1.getR2Config)();
+        if (r2Config) {
+            (0, r2Helper_1.uploadDirectoryToR2)(scormDir, `h5p-scorm/${scormId}`, r2Config)
+                .then(({ uploaded, errors }) => {
+                console.log(`[R2] SCORM ${scormId}: ${uploaded} archivos subidos a R2.`);
+                if (errors.length > 0)
+                    console.warn('[R2] Errores:', errors);
+            })
+                .catch(e => console.warn('[R2] Error subiendo SCORM a R2:', e.message));
+        }
+        else {
+            console.warn('[R2] Variables R2_* no configuradas — SCORM no se respalda en R2.');
+        }
         // Find imsmanifest.xml or entry point
         let entryPoint = 'index.html';
         const manifestPath = path_1.default.join(scormDir, 'imsmanifest.xml');
@@ -382,7 +398,131 @@ try {
 catch (e) {
     console.error('[Startup Error] No se pudo inicializar Supabase. Revisa la variable SUPABASE_URL:', e.message);
 }
-// ── SCRIPT postMessage para comunicar guardado al padre React ─────────────────
+/**
+ * Sincroniza los archivos de un contenido H5P al bucket 'h5p-content' de Supabase Storage.
+ * Se usa como backup automático tras cada guardado desde el editor.
+ * La clave de almacenamiento es: h5p-drafts/{contentId}/*
+ *
+ * Es una operación fire-and-forget: no bloquea la respuesta al cliente.
+ */
+async function syncContentToSupabase(contentId) {
+    const contentPath = path_1.default.join(H5P_ROOT, 'content', String(contentId));
+    if (!fs_1.default.existsSync(contentPath))
+        return;
+    const storagePrefix = `h5p-drafts/${contentId}`;
+    // 1. Respaldo en Supabase Storage
+    if (supabase) {
+        try {
+            const uploadDir = async (localPath, remotePrefix) => {
+                const entries = fs_1.default.readdirSync(localPath, { withFileTypes: true });
+                for (const entry of entries) {
+                    const fullPath = path_1.default.join(localPath, entry.name);
+                    const remoteKey = `${remotePrefix}/${entry.name}`;
+                    if (entry.isDirectory()) {
+                        await uploadDir(fullPath, remoteKey);
+                    }
+                    else {
+                        const buffer = fs_1.default.readFileSync(fullPath);
+                        await supabase.storage
+                            .from('h5p-content')
+                            .upload(remoteKey, buffer, { upsert: true, contentType: getMime(entry.name) });
+                    }
+                }
+            };
+            await uploadDir(contentPath, storagePrefix);
+            console.log(`[Sync] Contenido H5P ${contentId} sincronizado a Supabase (h5p-drafts/${contentId}).`);
+        }
+        catch (e) {
+            console.warn(`[Sync Supabase] Error sincronizando a Supabase:`, e.message);
+        }
+    }
+    // 2. Respaldo espejo en Cloudflare R2 (si R2 está configurado)
+    const r2Config = (0, r2Helper_1.getR2Config)();
+    if (r2Config) {
+        try {
+            const result = await (0, r2Helper_1.uploadDirectoryToR2)(contentPath, storagePrefix, r2Config);
+            console.log(`[Sync R2] Contenido H5P ${contentId}: ${result.uploaded} archivos respaldados en R2.`);
+        }
+        catch (e) {
+            console.warn(`[Sync R2] Error respaldando a R2:`, e.message);
+        }
+    }
+}
+/**
+ * Restaura los archivos de un contenido H5P desde Supabase Storage o Cloudflare R2
+ * si no existen localmente en el disco (ej. tras reinicio o suspensión del contenedor en Render).
+ *
+ * @returns true si el contenido existe localmente o fue restaurado con éxito; false si no se encontró.
+ */
+async function restoreContentFromSupabase(contentId) {
+    const contentPath = path_1.default.join(H5P_ROOT, 'content', String(contentId));
+    // Si ya existen h5p.json y content.json en disco, no hace falta descargar
+    if (fs_1.default.existsSync(path_1.default.join(contentPath, 'h5p.json')) && fs_1.default.existsSync(path_1.default.join(contentPath, 'content.json'))) {
+        return true;
+    }
+    const storagePrefix = `h5p-drafts/${contentId}`;
+    // Intento 1: Supabase Storage
+    if (supabase) {
+        try {
+            const listFilesRecursive = async (prefix) => {
+                const { data, error } = await supabase.storage.from('h5p-content').list(prefix, { limit: 100 });
+                if (error || !data || data.length === 0)
+                    return [];
+                let allFiles = [];
+                for (const item of data) {
+                    const itemPath = prefix ? `${prefix}/${item.name}` : item.name;
+                    if (item.id === null || (!item.metadata && !item.updated_at)) {
+                        const subFiles = await listFilesRecursive(itemPath);
+                        allFiles = allFiles.concat(subFiles);
+                    }
+                    else {
+                        allFiles.push(itemPath);
+                    }
+                }
+                return allFiles;
+            };
+            const remoteFiles = await listFilesRecursive(storagePrefix);
+            if (remoteFiles && remoteFiles.length > 0) {
+                fs_1.default.mkdirSync(contentPath, { recursive: true });
+                for (const remoteFile of remoteFiles) {
+                    const relativePath = remoteFile.substring(storagePrefix.length + 1);
+                    const localFilePath = path_1.default.join(contentPath, relativePath);
+                    fs_1.default.mkdirSync(path_1.default.dirname(localFilePath), { recursive: true });
+                    const { data, error } = await supabase.storage.from('h5p-content').download(remoteFile);
+                    if (error || !data) {
+                        console.error(`[Restore] Error descargando ${remoteFile}:`, error?.message);
+                        continue;
+                    }
+                    const buffer = Buffer.from(await data.arrayBuffer());
+                    fs_1.default.writeFileSync(localFilePath, buffer);
+                }
+                if (fs_1.default.existsSync(path_1.default.join(contentPath, 'h5p.json')) && fs_1.default.existsSync(path_1.default.join(contentPath, 'content.json'))) {
+                    console.log(`[Restore Supabase] Contenido H5P ${contentId} restaurado exitosamente desde Supabase Storage (${remoteFiles.length} archivos).`);
+                    return true;
+                }
+            }
+        }
+        catch (err) {
+            console.warn(`[Restore Supabase] Error al consultar Supabase Storage para ${contentId}:`, err.message);
+        }
+    }
+    // Intento 2: Cloudflare R2 (fallback espejo)
+    const r2Config = (0, r2Helper_1.getR2Config)();
+    if (r2Config) {
+        try {
+            const r2Success = await (0, r2Helper_1.restoreDirectoryFromR2)(storagePrefix, contentPath, r2Config);
+            if (r2Success) {
+                console.log(`[Restore R2] Contenido H5P ${contentId} restaurado exitosamente desde Cloudflare R2.`);
+                return true;
+            }
+        }
+        catch (err) {
+            console.warn(`[Restore R2] Error al consultar R2 para ${contentId}:`, err.message);
+        }
+    }
+    console.warn(`[Restore] Contenido ${contentId} no encontrado ni en Supabase Storage ni en R2.`);
+    return false;
+}
 const POST_MESSAGE_SCRIPT = `
 <script>
 (function() {
@@ -534,6 +674,9 @@ async function initAndMount() {
             const lang = req.query.language || 'es';
             let model;
             try {
+                if (contentId) {
+                    await restoreContentFromSupabase(contentId);
+                }
                 model = await h5pEditor.render(contentId, lang, user);
             }
             catch (renderErr) {
@@ -735,6 +878,9 @@ async function initAndMount() {
             }
             const newContentId = await h5pEditor.saveOrUpdateContent(contentId ? String(contentId) : undefined, params, metadata, library, user);
             console.log('[H5P POST] Guardado exitoso, contentId:', newContentId);
+            // Sincronizar a Supabase en background para persistencia entre reinicios.
+            // Fire-and-forget: no bloquea la respuesta al editor.
+            syncContentToSupabase(String(newContentId)).catch(e => console.warn('[Sync] Error sincronizando contenido a Supabase:', e.message));
             // La librería nativa h5peditor.js espera JSON de vuelta con el contentId
             res.status(200).send(JSON.stringify({ contentId: newContentId }));
         }
@@ -750,8 +896,11 @@ async function initAndMount() {
     // 8. Ruta: Player H5P
     app.get('/h5p/play/:contentId', async (req, res) => {
         try {
+            const contentId = req.params.contentId;
             const user = getH5PUser(req);
-            const model = await h5pPlayer.render(req.params.contentId, user);
+            // Si no existe localmente, intentar restaurar desde Supabase Storage
+            await restoreContentFromSupabase(contentId);
+            const model = await h5pPlayer.render(contentId, user);
             let html = typeof model === 'string' ? model : (model?.html || JSON.stringify(model));
             // Inyectar script para avisar al padre React que la actividad se guardó y cargó el player
             const notifyScript = `
@@ -806,6 +955,8 @@ async function initAndMount() {
             console.log(`[H5P] Importando paquete desde ${tempPath}...`);
             const result = await packageImporter.addPackageLibrariesAndContent(tempPath, user);
             console.log(`[H5P] Paquete importado con éxito. ID: ${result.id}`);
+            // Sincronizar automáticamente a Supabase Storage
+            syncContentToSupabase(String(result.id)).catch(e => console.warn('[Sync] Error sincronizando H5P subido a Supabase:', e.message));
             // Limpiar archivo temporal
             try {
                 fs_1.default.unlinkSync(tempPath);
