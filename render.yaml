@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: ingenia-h5p-service
+    runtime: node
+    plan: free
+    branch: main
+
+    # Render ejecuta esto en sus servidores (no en tu ordenador)
+    buildCommand: npm ci --omit=dev && npm run build && node patch-h5p.js
+    startCommand: node dist/index.js
+
+    envVars:
+      # Render asigna PORT automáticamente — no fijar valor
+      - key: H5P_ROOT
+        value: ./h5p-storage
+      - key: NODE_ENV
+        value: production
+
+      # Las siguientes variables se rellenan en el dashboard de Render
+      # (sync: false = Render no las sobreescribe desde este archivo)
+      - key: H5P_BASE_URL
+        sync: false   # URL pública del propio servicio en Render
+      - key: FRONTEND_URL
+        sync: false   # https://tu-app.vercel.app
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        value: ingenia-lms-files
+      - key: R2_PUBLIC_URL
+        sync: false   # https://pub-f43f56500f3e4071b0bae7d0edfa84fc.r2.dev

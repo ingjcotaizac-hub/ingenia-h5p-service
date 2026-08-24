@@ -10,6 +10,7 @@ import extractZip from 'extract-zip';
 import crypto from 'crypto';
 import OAuth from 'oauth-1.0a';
 import { parseStringPromise } from 'xml2js';
+import { getR2Config, uploadDirectoryToR2 } from './r2Helper';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -150,6 +151,20 @@ app.post('/upload-scorm', upload.single('file'), async (req, res): Promise<void>
     // Extract zip
     await extractZip(tempZipPath, { dir: scormDir });
     fs.unlinkSync(tempZipPath);
+
+    // Subir contenido SCORM a R2 en background para persistencia entre reinicios.
+    // Fire-and-forget: no bloquea la respuesta al cliente.
+    const r2Config = getR2Config();
+    if (r2Config) {
+      uploadDirectoryToR2(scormDir, `h5p-scorm/${scormId}`, r2Config)
+        .then(({ uploaded, errors }) => {
+          console.log(`[R2] SCORM ${scormId}: ${uploaded} archivos subidos a R2.`);
+          if (errors.length > 0) console.warn('[R2] Errores:', errors);
+        })
+        .catch(e => console.warn('[R2] Error subiendo SCORM a R2:', e.message));
+    } else {
+      console.warn('[R2] Variables R2_* no configuradas — SCORM no se respalda en R2.');
+    }
 
     // Find imsmanifest.xml or entry point
     let entryPoint = 'index.html';
@@ -380,7 +395,40 @@ try {
   console.error('[Startup Error] No se pudo inicializar Supabase. Revisa la variable SUPABASE_URL:', e.message);
 }
 
-// ── SCRIPT postMessage para comunicar guardado al padre React ─────────────────
+/**
+ * Sincroniza los archivos de un contenido H5P al bucket 'h5p-content' de Supabase Storage.
+ * Se usa como backup automático tras cada guardado desde el editor.
+ * La clave de almacenamiento es: h5p-drafts/{contentId}/*
+ *
+ * Es una operación fire-and-forget: no bloquea la respuesta al cliente.
+ */
+async function syncContentToSupabase(contentId: string): Promise<void> {
+  if (!supabase) return;
+  const contentPath = path.join(H5P_ROOT, 'content', String(contentId));
+  if (!fs.existsSync(contentPath)) return;
+
+  const storagePrefix = `h5p-drafts/${contentId}`;
+
+  const uploadDir = async (localPath: string, remotePrefix: string): Promise<void> => {
+    const entries = fs.readdirSync(localPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath  = path.join(localPath, entry.name);
+      const remoteKey = `${remotePrefix}/${entry.name}`;
+      if (entry.isDirectory()) {
+        await uploadDir(fullPath, remoteKey);
+      } else {
+        const buffer = fs.readFileSync(fullPath);
+        await supabase.storage
+          .from('h5p-content')
+          .upload(remoteKey, buffer, { upsert: true, contentType: getMime(entry.name) });
+      }
+    }
+  };
+
+  await uploadDir(contentPath, storagePrefix);
+  console.log(`[Sync] Contenido H5P ${contentId} sincronizado a Supabase (h5p-drafts/${contentId}).`);
+}
+
 const POST_MESSAGE_SCRIPT = `
 <script>
 (function() {
@@ -775,7 +823,13 @@ async function initAndMount() {
       );
 
       console.log('[H5P POST] Guardado exitoso, contentId:', newContentId);
-      
+
+      // Sincronizar a Supabase en background para persistencia entre reinicios.
+      // Fire-and-forget: no bloquea la respuesta al editor.
+      syncContentToSupabase(String(newContentId)).catch(e =>
+        console.warn('[Sync] Error sincronizando contenido a Supabase:', e.message)
+      );
+
       // La librería nativa h5peditor.js espera JSON de vuelta con el contentId
       res.status(200).send(JSON.stringify({ contentId: newContentId }));
     } catch (err: any) {
