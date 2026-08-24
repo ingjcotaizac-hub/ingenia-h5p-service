@@ -24,7 +24,9 @@
     "extract-zip": "^2.0.1",
     "jsonwebtoken": "*",
     "jwks-rsa": "*",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "oauth-1.0a": "^2.2.6",
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@types/cors": "*",
@@ -33,6 +35,7 @@
     "@types/jsonwebtoken": "*",
     "@types/multer": "^2.2.0",
     "@types/node": "*",
+    "@types/xml2js": "^0.4.14",
     "tsx": "*",
     "typescript": "*"
   }

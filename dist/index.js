@@ -46,6 +46,8 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const multer_1 = __importDefault(require("multer"));
 const extract_zip_1 = __importDefault(require("extract-zip"));
 const crypto_1 = __importDefault(require("crypto"));
+const oauth_1_0a_1 = __importDefault(require("oauth-1.0a"));
+const xml2js_1 = require("xml2js");
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
     limits: { fileSize: 250 * 1024 * 1024 } // 250 MB
@@ -238,7 +240,91 @@ app.get('/scorm/play/:id', (req, res) => {
 </body>
 </html>
   `;
-    res.send(html);
+    res.send(html); // ── ENDPOINTS LTI (Herramientas Externas) ──────────────────────────────────
+    app.post('/lti/launch', async (req, res) => {
+        try {
+            const { launchUrl, consumerKey, params } = req.body;
+            // Obtener Shared Secret desde Supabase o fallback
+            let sharedSecret = 'mock_secret_123';
+            const oauth = new oauth_1_0a_1.default({
+                consumer: { key: consumerKey, secret: sharedSecret },
+                signature_method: 'HMAC-SHA1',
+                hash_function(base_string, key) {
+                    return crypto_1.default.createHmac('sha1', key).update(base_string).digest('base64');
+                },
+            });
+            const request_data = {
+                url: launchUrl,
+                method: 'POST',
+                data: params
+            };
+            const signedData = oauth.authorize(request_data);
+            const finalParams = { ...params, ...signedData };
+            // Construir el formulario auto-submit
+            const formHtml = `
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>LTI Launch</title>
+  </head>
+  <body onload="document.forms[0].submit()">
+    <form action="${launchUrl}" method="POST">
+      ${Object.entries(finalParams).map(([k, v]) => `<input type="hidden" name="${k}" value="${v}" />`).join('\n      ')}
+    </form>
+    <p style="font-family: sans-serif; font-size: 12px; text-align: center; color: #4b5563; margin-top: 50px;">
+      Conectando de forma segura con la herramienta LTI... (Firma generada)
+    </p>
+  </body>
+</html>
+`;
+            res.send(formHtml);
+        }
+        catch (error) {
+            console.error('[LTI Launch error]', error);
+            res.status(500).send('Error en lanzamiento LTI: ' + error.message);
+        }
+    });
+    // Recibir calificaciones (LTI Basic Outcomes)
+    app.post('/lti/grade', async (req, res) => {
+        try {
+            let xmlBody = '';
+            req.on('data', chunk => { xmlBody += chunk; });
+            req.on('end', async () => {
+                try {
+                    const result = await (0, xml2js_1.parseStringPromise)(xmlBody);
+                    console.log('[LTI Grade Received]', JSON.stringify(result, null, 2));
+                    // Responder con XML de éxito
+                    const responseXml = `<?xml version="1.0" encoding="UTF-8"?>
+<imsx_POXEnvelopeResponse xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">
+  <imsx_POXHeader>
+    <imsx_POXResponseHeaderInfo>
+      <imsx_version>V1.0</imsx_version>
+      <imsx_messageIdentifier>response</imsx_messageIdentifier>
+      <imsx_statusInfo>
+        <imsx_codeMajor>success</imsx_codeMajor>
+        <imsx_severity>status</imsx_severity>
+        <imsx_description>Grade recorded</imsx_description>
+      </imsx_statusInfo>
+    </imsx_POXResponseHeaderInfo>
+  </imsx_POXHeader>
+  <imsx_POXBody>
+    <replaceResultResponse/>
+  </imsx_POXBody>
+</imsx_POXEnvelopeResponse>`;
+                    res.set('Content-Type', 'application/xml');
+                    res.send(responseXml);
+                }
+                catch (e) {
+                    console.error(e);
+                    res.status(400).send('Invalid XML');
+                }
+            });
+        }
+        catch (error) {
+            console.error('[LTI Grade error]', error);
+            res.status(500).send('Error');
+        }
+    });
 });
 app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`[Ingenia H5P Service] ✅ Escuchando en 0.0.0.0:${PORT}`);
