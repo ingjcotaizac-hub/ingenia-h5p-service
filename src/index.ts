@@ -198,12 +198,30 @@ app.post('/upload-scorm', upload.single('file'), async (req, res): Promise<void>
   }
 });
 
-// ── SERVIR CONTENIDO SCORM ESTÁTICO ──
+// ── SERVIR CONTENIDO SCORM ESTÁTICO (con auto-hidratación desde R2) ──
+app.use('/scorm/content/:scormId', async (req, res, next) => {
+  const scormId = req.params.scormId;
+  const scormDir = path.join(H5P_ROOT, 'scorm', 'content', scormId);
+  if (!fs.existsSync(scormDir)) {
+    const r2Config = getR2Config();
+    if (r2Config) {
+      await restoreDirectoryFromR2(`h5p-scorm/${scormId}`, scormDir, r2Config);
+    }
+  }
+  next();
+});
 app.use('/scorm/content', express.static(path.join(H5P_ROOT, 'scorm', 'content')));
 
 // ── REPRODUCTOR SCORM CON API INYECTADA ──
-app.get('/scorm/play/:id', (req, res) => {
+app.get('/scorm/play/:id', async (req, res) => {
   const scormId = req.params.id;
+  const scormDir = path.join(H5P_ROOT, 'scorm', 'content', scormId);
+  if (!fs.existsSync(scormDir)) {
+    const r2Config = getR2Config();
+    if (r2Config) {
+      await restoreDirectoryFromR2(`h5p-scorm/${scormId}`, scormDir, r2Config);
+    }
+  }
   const entryPoint = req.query.entry || 'index.html';
   const iframeSrc = `/scorm/content/${scormId}/${entryPoint}`;
   
