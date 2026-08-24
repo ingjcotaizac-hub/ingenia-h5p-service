@@ -18,7 +18,7 @@ const upload = multer({
 });
 
 const PORT = process.env.PORT || 3001;
-const H5P_ROOT = process.env.H5P_ROOT || path.join(process.cwd(), 'h5p-storage');
+const H5P_ROOT = path.resolve(process.env.H5P_ROOT || path.join(process.cwd(), 'h5p-storage'));
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
