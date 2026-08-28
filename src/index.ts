@@ -11,6 +11,8 @@ import crypto from 'crypto';
 import OAuth from 'oauth-1.0a';
 import { parseStringPromise } from 'xml2js';
 import { getR2Config, uploadDirectoryToR2, restoreDirectoryFromR2 } from './r2Helper';
+import { requireAuth, requireRole, enforceTenantMatch, extractAndVerifyToken } from './middleware/auth';
+import { authorizeContentAccess } from './middleware/authorizeContentAccess';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -49,12 +51,6 @@ app.use(cors({
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: true, limit: '500mb' }));
 
-// Middleware to inject user for all H5P routes
-app.use((req, res, next) => {
-  (req as any).user = getH5PUser(req);
-  next();
-});
-
 // ── HEALTH CHECK (disponible INMEDIATAMENTE, antes de inicializar H5P) ────────
 let h5pStatus: 'initializing' | 'ready' | 'error' = 'initializing';
 let h5pError = '';
@@ -76,7 +72,7 @@ app.get('/', (_req, res) => {
 });
 
 // ── ENDPOINT PARA SUBIR ARCHIVOS DIRECTO A SUPABASE ────────
-app.post('/upload', upload.single('file'), async (req, res): Promise<void> => {
+app.post('/upload', requireAuth, requireRole('teacher', 'admin'), upload.single('file'), async (req, res): Promise<void> => {
   try {
     if (!req.file) {
       res.status(400).json({ error: 'No file provided' });
@@ -88,8 +84,15 @@ app.post('/upload', upload.single('file'), async (req, res): Promise<void> => {
       return;
     }
 
-    const folder = req.headers['x-upload-folder'] as string || 'uploads';
-    const tenantId = req.headers['x-upload-tenant'] as string || 'shared';
+    const folder = (req.headers['x-upload-folder'] as string) || 'uploads';
+    const requestedTenant = req.headers['x-upload-tenant'] as string | undefined;
+
+    if (requestedTenant && !enforceTenantMatch(req, requestedTenant)) {
+      res.status(403).json({ error: 'Forbidden: Cannot upload to another tenant' });
+      return;
+    }
+
+    const tenantId = req.user!.tenant_id;
     // Use the actual original filename from multer
     const originalName = req.file.originalname;
     
@@ -133,13 +136,20 @@ app.post('/upload', upload.single('file'), async (req, res): Promise<void> => {
 });
 
 // ── ENDPOINT PARA SUBIR Y DESCOMPRIMIR SCORM EN SERVIDOR ──
-app.post('/upload-scorm', upload.single('file'), async (req, res): Promise<void> => {
+app.post('/upload-scorm', requireAuth, requireRole('teacher', 'admin'), upload.single('file'), async (req, res): Promise<void> => {
   try {
     if (!req.file) {
       res.status(400).json({ error: 'No file provided' });
       return;
     }
 
+    const requestedTenant = req.headers['x-upload-tenant'] as string | undefined;
+    if (requestedTenant && !enforceTenantMatch(req, requestedTenant)) {
+      res.status(403).json({ error: 'Forbidden: Cannot upload SCORM to another tenant' });
+      return;
+    }
+
+    const tenantId = req.user!.tenant_id;
     const scormId = crypto.randomUUID();
     const scormDir = path.join(H5P_ROOT, 'scorm', 'content', scormId);
     
@@ -158,7 +168,7 @@ app.post('/upload-scorm', upload.single('file'), async (req, res): Promise<void>
     if (r2Config) {
       uploadDirectoryToR2(scormDir, `h5p-scorm/${scormId}`, r2Config)
         .then(({ uploaded, errors }) => {
-          console.log(`[R2] SCORM ${scormId}: ${uploaded} archivos subidos a R2.`);
+          console.log(`[R2] SCORM ${scormId} (tenant ${tenantId}): ${uploaded} archivos subidos a R2.`);
           if (errors.length > 0) console.warn('[R2] Errores:', errors);
         })
         .catch(e => console.warn('[R2] Error subiendo SCORM a R2:', e.message));
@@ -199,8 +209,18 @@ app.post('/upload-scorm', upload.single('file'), async (req, res): Promise<void>
 });
 
 // ── SERVIR CONTENIDO SCORM ESTÁTICO (con auto-hidratación desde R2) ──
-app.use('/scorm/content/:scormId', async (req, res, next) => {
-  const scormId = req.params.scormId;
+app.use('/scorm/content/:scormId', requireAuth, async (req, res, next) => {
+  const scormId = String(req.params.scormId);
+  const authCheck = await authorizeContentAccess(req.user!, scormId, 'scorm');
+  if (!authCheck.ok) {
+    if (authCheck.status === 404) {
+      res.status(404).json({ error: 'Not Found: SCORM content does not exist' });
+      return;
+    }
+    res.status(403).json({ error: `Forbidden: Access denied (${authCheck.reason})` });
+    return;
+  }
+
   const scormDir = path.join(H5P_ROOT, 'scorm', 'content', scormId);
   if (!fs.existsSync(scormDir)) {
     const r2Config = getR2Config();
@@ -213,8 +233,18 @@ app.use('/scorm/content/:scormId', async (req, res, next) => {
 app.use('/scorm/content', express.static(path.join(H5P_ROOT, 'scorm', 'content')));
 
 // ── REPRODUCTOR SCORM CON API INYECTADA ──
-app.get('/scorm/play/:id', async (req, res) => {
-  const scormId = req.params.id;
+app.get('/scorm/play/:id', requireAuth, async (req, res) => {
+  const scormId = String(req.params.id);
+  const authCheck = await authorizeContentAccess(req.user!, scormId, 'scorm');
+  if (!authCheck.ok) {
+    if (authCheck.status === 404) {
+      res.status(404).json({ error: 'Not Found: SCORM content does not exist' });
+      return;
+    }
+    res.status(403).json({ error: `Forbidden: Access denied (${authCheck.reason})` });
+    return;
+  }
+
   const scormDir = path.join(H5P_ROOT, 'scorm', 'content', scormId);
   if (!fs.existsSync(scormDir)) {
     const r2Config = getR2Config();
@@ -380,25 +410,32 @@ function getMime(filename: string): string {
 
 // ── USUARIO H5P ───────────────────────────────────────────────────────────────
 function getH5PUser(req: express.Request): any {
-  const token = req.headers.authorization?.split(' ')[1];
-  let userId = 'anonymous';
-  let userName = 'Anonymous';
-  let userEmail = 'anonymous@ingenia.lms';
-
-  if (token && SUPABASE_JWT_SECRET) {
-    try {
-      const decoded: any = jwt.verify(token, SUPABASE_JWT_SECRET);
-      userId = decoded.sub || 'anonymous';
-      userEmail = decoded.email || userEmail;
-      userName = decoded.user_metadata?.name || userEmail;
-    } catch { /* Token inválido — continuar como anónimo */ }
+  if (req.user) {
+    return {
+      id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
+      type: 'local',
+      canInstallRecommended: false,
+      canUpdateAndInstallLibraries: true,
+      canCreateRestricted: false,
+    };
   }
 
-  return {
-    id: userId, name: userName, email: userEmail, type: 'local',
-    canInstallRecommended: false, canUpdateAndInstallLibraries: true,
-    canCreateRestricted: false,
-  };
+  try {
+    const verified = extractAndVerifyToken(req);
+    return {
+      id: verified.id,
+      name: verified.name,
+      email: verified.email,
+      type: 'local',
+      canInstallRecommended: false,
+      canUpdateAndInstallLibraries: true,
+      canCreateRestricted: false,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
@@ -713,7 +750,7 @@ async function initAndMount() {
   } catch(e) {}
 
   // 7. Ruta: Editor H5P (GET)
-  app.get('/h5p/editor/:contentId?', async (req, res) => {
+  app.get('/h5p/editor/:contentId?', requireAuth, requireRole('teacher', 'admin'), async (req, res) => {
     try {
       const user = getH5PUser(req);
       const contentIdParam = (req.params as any).contentId;
@@ -893,7 +930,7 @@ async function initAndMount() {
   });
 
   // El editor H5P envía multipart/form-data (necesita soportar imágenes dentro del editor)
-  app.post('/h5p/editor/:contentId?', upload.any(), async (req, res) => {
+  app.post('/h5p/editor/:contentId?', requireAuth, requireRole('teacher', 'admin'), upload.any(), async (req, res) => {
     try {
       const user = getH5PUser(req);
       const contentIdParam = (req.params as any).contentId;
@@ -963,10 +1000,25 @@ async function initAndMount() {
     res.redirect(`/h5p/play/${req.params.contentId}`);
   });
 
+  // Middleware de autorización para H5P Player y subrecursos
+  app.use('/h5p/play/:contentId', requireAuth, async (req, res, next) => {
+    const contentId = String(req.params.contentId);
+    const authCheck = await authorizeContentAccess(req.user!, contentId, 'h5p');
+    if (!authCheck.ok) {
+      if (authCheck.status === 404) {
+        res.status(404).json({ error: 'Not Found: H5P content does not exist' });
+        return;
+      }
+      res.status(403).json({ error: `Forbidden: Access denied (${authCheck.reason})` });
+      return;
+    }
+    next();
+  });
+
   // 8. Ruta: Player H5P
   app.get('/h5p/play/:contentId', async (req, res) => {
     try {
-      const contentId = req.params.contentId;
+      const contentId = String(req.params.contentId);
       const user = getH5PUser(req);
 
       // Si no existe localmente, intentar restaurar desde Supabase Storage
@@ -1020,7 +1072,7 @@ async function initAndMount() {
   app.all('/setFinished', (req, res) => res.status(200).json({}));
 
   // 11. API: Subir archivo .h5p nativamente
-  app.post('/api/upload-h5p', upload.single('file'), async (req, res) => {
+  app.post('/api/upload-h5p', requireAuth, requireRole('teacher', 'admin'), upload.single('file'), async (req, res) => {
     try {
       const user = getH5PUser(req);
       if (!req.file) {
@@ -1061,17 +1113,44 @@ async function initAndMount() {
   });
 
   // 12. API: Publicar contenido a Supabase Storage
-  app.post('/api/publish', async (req, res) => {
+  app.post('/api/publish', requireAuth, requireRole('teacher', 'admin'), async (req, res) => {
     const { contentId, tenantId, activityId } = req.body;
-    if (!contentId || !tenantId || !activityId) {
-      return res.status(400).json({ error: 'Faltan parámetros: contentId, tenantId, activityId' });
+    if (!contentId || !activityId) {
+      return res.status(400).json({ error: 'Faltan parámetros: contentId, activityId' });
     }
+
+    if (tenantId && !enforceTenantMatch(req, tenantId)) {
+      return res.status(403).json({ error: 'Forbidden: Cannot publish to another tenant' });
+    }
+
+    const verifiedTenantId = req.user!.tenant_id;
+
+    // Validación server-side: asegurar que la actividad pertenece al tenant del requester
+    if (supabase && SUPABASE_URL) {
+      try {
+        const { data: activity, error: actError } = await supabase
+          .from('activities')
+          .select('id, tenant_id')
+          .eq('id', activityId)
+          .maybeSingle();
+
+        if (actError || (activity && activity.tenant_id !== verifiedTenantId)) {
+          console.error(
+            `[Security/Integrity] Publish rejected: Activity ${activityId} does not belong to tenant ${verifiedTenantId}`
+          );
+          return res.status(403).json({ error: 'Forbidden: Activity does not belong to your tenant' });
+        }
+      } catch (checkErr: any) {
+        console.warn('[Publish check warning]', checkErr.message);
+      }
+    }
+
     try {
       const contentPath = path.join(H5P_ROOT, 'content', String(contentId));
       if (!fs.existsSync(contentPath)) {
         return res.status(404).json({ error: `Contenido ${contentId} no encontrado` });
       }
-      const storagePrefix = `${tenantId}/h5p/${activityId}`;
+      const storagePrefix = `${verifiedTenantId}/h5p/${activityId}`;
       let uploadedCount = 0;
       const errors: string[] = [];
 
