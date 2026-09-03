@@ -236,7 +236,8 @@ app.use('/scorm/content', express_1.default.static(path_1.default.join(H5P_ROOT,
 // ── REPRODUCTOR SCORM CON API INYECTADA ──
 app.get('/scorm/play/:id', auth_1.requireAuth, async (req, res) => {
     const scormId = String(req.params.id);
-    const authCheck = await (0, authorizeContentAccess_1.authorizeContentAccess)(req.user, scormId, 'scorm');
+    const activityIdHint = req.query.activityId ? String(req.query.activityId) : undefined;
+    const authCheck = await (0, authorizeContentAccess_1.authorizeContentAccess)(req.user, scormId, 'scorm', undefined, activityIdHint);
     if (!authCheck.ok) {
         if (authCheck.status === 404) {
             res.status(404).json({ error: 'Not Found: SCORM content does not exist' });
@@ -938,7 +939,8 @@ async function initAndMount() {
     // Middleware de autorización para H5P Player y subrecursos
     app.use('/h5p/play/:contentId', auth_1.requireAuth, async (req, res, next) => {
         const contentId = String(req.params.contentId);
-        const authCheck = await (0, authorizeContentAccess_1.authorizeContentAccess)(req.user, contentId, 'h5p');
+        const activityIdHint = req.query.activityId ? String(req.query.activityId) : undefined;
+        const authCheck = await (0, authorizeContentAccess_1.authorizeContentAccess)(req.user, contentId, 'h5p', undefined, activityIdHint);
         if (!authCheck.ok) {
             if (authCheck.status === 404) {
                 res.status(404).json({ error: 'Not Found: H5P content does not exist' });

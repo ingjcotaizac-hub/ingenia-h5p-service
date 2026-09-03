@@ -34,8 +34,8 @@ function setSupabaseClient(client) {
 /**
  * Valida la autorización de acceso a contenido H5P o SCORM según el rol del usuario y sus matrículas en Supabase.
  */
-async function authorizeContentAccess(user, contentId, kind, customSupabase) {
-    const cacheKey = `${user.id}:${user.tenant_id}:${kind}:${contentId}`;
+async function authorizeContentAccess(user, contentId, kind, customSupabase, activityIdHint) {
+    const cacheKey = `${user.id}:${user.tenant_id}:${kind}:${contentId}:${activityIdHint || ''}`;
     const now = Date.now();
     const cached = accessCache.get(cacheKey);
     if (cached && cached.expiresAt > now) {
@@ -49,17 +49,39 @@ async function authorizeContentAccess(user, contentId, kind, customSupabase) {
     }
     try {
         // 1. Buscar la actividad en Supabase
-        // Puede ser por id directo (UUID) o por metadatos (content->>h5p_content_id o content->>scorm_id)
         let activity = null;
-        // Intento A: ID directo
+        // Intento 0: Si viene activityIdHint
+        if (activityIdHint && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(activityIdHint)) {
+            const { data, error } = await supabase
+                .from('activities')
+                .select('id, tenant_id, module_id, modules(course_id)')
+                .eq('id', activityIdHint)
+                .maybeSingle();
+            if (error) {
+                console.warn('[authorizeContentAccess] Error querying by activityIdHint:', error.message);
+            }
+            else if (data) {
+                const courseId = data.modules?.course_id || data.course_id;
+                activity = {
+                    id: data.id,
+                    tenant_id: data.tenant_id,
+                    course_id: courseId,
+                    module_id: data.module_id,
+                };
+            }
+        }
+        // Intento A: ID directo de actividad
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contentId);
-        if (isUuid) {
+        if (!activity && isUuid) {
             const { data, error } = await supabase
                 .from('activities')
                 .select('id, tenant_id, module_id, modules(course_id)')
                 .eq('id', contentId)
                 .maybeSingle();
-            if (!error && data) {
+            if (error) {
+                console.warn('[authorizeContentAccess] Error querying by direct ID:', error.message);
+            }
+            else if (data) {
                 const courseId = data.modules?.course_id || data.course_id;
                 activity = {
                     id: data.id,
@@ -69,14 +91,17 @@ async function authorizeContentAccess(user, contentId, kind, customSupabase) {
                 };
             }
         }
-        // Intento B: Si no se encontró por ID directo, buscar por content metadata
+        // Intento B: Buscar en metadatos de content (scormId, scorm_id, h5pId, h5p_content_id, etc.)
         if (!activity) {
             const { data, error } = await supabase
                 .from('activities')
                 .select('id, tenant_id, module_id, content, modules(course_id)')
-                .or(`content->>h5p_content_id.eq.${contentId},content->>scorm_id.eq.${contentId},content->>contentId.eq.${contentId}`)
+                .or(`content->>scormId.eq.${contentId},content->>scorm_id.eq.${contentId},content->>h5pId.eq.${contentId},content->>h5p_id.eq.${contentId},content->>h5p_content_id.eq.${contentId},content->>contentId.eq.${contentId},content->>packageId.eq.${contentId}`)
                 .maybeSingle();
-            if (!error && data) {
+            if (error) {
+                console.warn('[authorizeContentAccess] Error querying by metadata:', error.message);
+            }
+            else if (data) {
                 const courseId = data.modules?.course_id || data.course_id;
                 activity = {
                     id: data.id,
@@ -86,9 +111,9 @@ async function authorizeContentAccess(user, contentId, kind, customSupabase) {
                 };
             }
         }
-        // Si aún no se encuentra, buscar en courses si es id de curso o recurso inexistente
+        // Si aún no se encuentra, devolver 404
         if (!activity) {
-            console.warn(`[authorizeContentAccess] Content ${contentId} not found in activities`);
+            console.warn(`[authorizeContentAccess] Content ${contentId} (hint: ${activityIdHint}) not found in activities`);
             const notFoundResult = {
                 ok: false,
                 status: 404,
@@ -96,6 +121,22 @@ async function authorizeContentAccess(user, contentId, kind, customSupabase) {
             };
             accessCache.set(cacheKey, { result: notFoundResult, expiresAt: now + CACHE_TTL_MS });
             return notFoundResult;
+        }
+        // Resolver course_id a través de module_id si no está presente
+        if (!activity.course_id && activity.module_id) {
+            try {
+                const { data: modData } = await supabase
+                    .from('modules')
+                    .select('course_id')
+                    .eq('id', activity.module_id)
+                    .maybeSingle();
+                if (modData?.course_id) {
+                    activity.course_id = modData.course_id;
+                }
+            }
+            catch (modErr) {
+                console.warn('[authorizeContentAccess] Error resolving module course_id:', modErr.message);
+            }
         }
         // 2. Validar pertenencia a Tenant
         if (activity.tenant_id !== user.tenant_id) {
