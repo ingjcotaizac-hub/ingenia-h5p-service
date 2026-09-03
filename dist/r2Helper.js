@@ -235,7 +235,10 @@ async function restoreDirectoryFromR2(r2Prefix, localDir, config) {
                 fs_1.default.writeFileSync(targetFilePath, buf);
             }
         }
-        return fs_1.default.existsSync(path_1.default.join(localDir, 'h5p.json')) && fs_1.default.existsSync(path_1.default.join(localDir, 'content.json'));
+        return ((fs_1.default.existsSync(path_1.default.join(localDir, 'h5p.json')) && fs_1.default.existsSync(path_1.default.join(localDir, 'content.json'))) ||
+            fs_1.default.existsSync(path_1.default.join(localDir, 'imsmanifest.xml')) ||
+            fs_1.default.existsSync(path_1.default.join(localDir, 'index.html')) ||
+            (fs_1.default.existsSync(localDir) && fs_1.default.readdirSync(localDir).length > 0));
     }
     catch (err) {
         console.warn('[R2 Restore] Error restaurando desde R2:', err.message);

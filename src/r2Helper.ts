@@ -298,7 +298,12 @@ export async function restoreDirectoryFromR2(
       }
     }
 
-    return fs.existsSync(path.join(localDir, 'h5p.json')) && fs.existsSync(path.join(localDir, 'content.json'));
+    return (
+      (fs.existsSync(path.join(localDir, 'h5p.json')) && fs.existsSync(path.join(localDir, 'content.json'))) ||
+      fs.existsSync(path.join(localDir, 'imsmanifest.xml')) ||
+      fs.existsSync(path.join(localDir, 'index.html')) ||
+      (fs.existsSync(localDir) && fs.readdirSync(localDir).length > 0)
+    );
   } catch (err: any) {
     console.warn('[R2 Restore] Error restaurando desde R2:', err.message);
     return false;
