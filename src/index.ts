@@ -209,48 +209,59 @@ app.post('/upload-scorm', requireAuth, requireRole('teacher', 'admin'), upload.s
 });
 
 // ── SERVIR CONTENIDO SCORM ESTÁTICO (con auto-hidratación bajo demanda desde R2) ──
-app.get('/scorm/content/:scormId/:filePath(*)?', async (req, res) => {
+app.use('/scorm/content/:scormId', async (req, res, next) => {
   const scormId = String(req.params.scormId);
-  const rawPath = (req.params as any).filePath || 'index.html';
+  const rawPath = (req.path || '').replace(/^\/+/, '') || 'index.html';
   const safeRelativePath = path.normalize(rawPath).replace(/^(\.\.[\/\\])+/, '');
   const localFilePath = path.join(H5P_ROOT, 'scorm', 'content', scormId, safeRelativePath);
 
-  // 1. Si existe en el disco local, servir directamente
+  // 1. Si existe en el disco local del contenedor, servir directamente
   if (fs.existsSync(localFilePath) && fs.statSync(localFilePath).isFile()) {
     return res.sendFile(path.resolve(localFilePath));
   }
 
-  // 2. Si no existe, descargar desde Cloudflare R2 bajo demanda
-  const r2PublicUrl = process.env.R2_PUBLIC_URL || 'https://pub-f43f56500f3e4071b0bae7d0edfa84fc.r2.dev';
-  const remoteUrl = `${r2PublicUrl}/h5p-scorm/${scormId}/${safeRelativePath.replace(/\\/g, '/')}`;
+  // 2. Descargar bajo demanda desde Cloudflare R2
+  const primaryBaseUrl = (process.env.R2_PUBLIC_URL || '').replace(/\/+$/, '');
+  const fallbackBaseUrl = 'https://pub-f43f56500f3e4071b0bae7d0edfa84fc.r2.dev';
+  const cleanRelative = safeRelativePath.replace(/\\/g, '/');
 
-  try {
-    const r2Res = await fetch(remoteUrl);
-    if (!r2Res.ok) {
-      console.warn(`[SCORM Content] 404 en R2: ${remoteUrl} (status: ${r2Res.status})`);
-      return res.status(404).send('Not Found: File does not exist in SCORM package');
-    }
+  const candidateUrls = [
+    primaryBaseUrl ? `${primaryBaseUrl}/h5p-scorm/${scormId}/${cleanRelative}` : null,
+    `${fallbackBaseUrl}/h5p-scorm/${scormId}/${cleanRelative}`
+  ].filter(Boolean) as string[];
 
-    const arrayBuffer = await r2Res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+  let fileBuffer: Buffer | null = null;
+  let fileContentType = 'application/octet-stream';
 
-    // Cachear en disco para servir instantáneamente en subsiguientes lecturas
+  for (const remoteUrl of candidateUrls) {
     try {
-      fs.mkdirSync(path.dirname(localFilePath), { recursive: true });
-      fs.writeFileSync(localFilePath, buffer);
-    } catch (fsErr: any) {
-      console.warn('[SCORM Content] Error cacheando archivo en disco:', fsErr.message);
+      const r2Res = await fetch(remoteUrl);
+      if (r2Res.ok) {
+        fileBuffer = Buffer.from(await r2Res.arrayBuffer());
+        fileContentType = r2Res.headers.get('content-type') || fileContentType;
+        break;
+      }
+    } catch {
+      // Intentar con el siguiente candidato
     }
-
-    const contentType = r2Res.headers.get('content-type') || 'application/octet-stream';
-    res.setHeader('Content-Type', contentType);
-    return res.send(buffer);
-  } catch (err: any) {
-    console.error(`[SCORM Content] Error descargando desde R2:`, err.message);
-    return res.status(500).send('Error loading SCORM resource');
   }
+
+  if (!fileBuffer) {
+    console.warn(`[SCORM Content] Archivo no encontrado en R2: ${scormId}/${cleanRelative}`);
+    return res.status(404).send('Not Found: File does not exist in SCORM package');
+  }
+
+  // Cachear en disco para servirlo instantáneamente en subsiguientes lecturas
+  try {
+    fs.mkdirSync(path.dirname(localFilePath), { recursive: true });
+    fs.writeFileSync(localFilePath, fileBuffer);
+  } catch (fsErr: any) {
+    console.warn('[SCORM Content] Error cacheando archivo en disco:', fsErr.message);
+  }
+
+  res.setHeader('Content-Type', fileContentType);
+  return res.send(fileBuffer);
 });
-app.use('/scorm/content', express.static(path.join(H5P_ROOT, 'scorm', 'content')));
 
 // ── REPRODUCTOR SCORM CON API INYECTADA ──
 app.get('/scorm/play/:id', requireAuth, async (req, res) => {
