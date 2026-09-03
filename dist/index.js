@@ -221,17 +221,8 @@ app.post('/upload-scorm', auth_1.requireAuth, (0, auth_1.requireRole)('teacher',
     }
 });
 // ── SERVIR CONTENIDO SCORM ESTÁTICO (con auto-hidratación desde R2) ──
-app.use('/scorm/content/:scormId', auth_1.requireAuth, async (req, res, next) => {
+app.use('/scorm/content/:scormId', async (req, res, next) => {
     const scormId = String(req.params.scormId);
-    const authCheck = await (0, authorizeContentAccess_1.authorizeContentAccess)(req.user, scormId, 'scorm');
-    if (!authCheck.ok) {
-        if (authCheck.status === 404) {
-            res.status(404).json({ error: 'Not Found: SCORM content does not exist' });
-            return;
-        }
-        res.status(403).json({ error: `Forbidden: Access denied (${authCheck.reason})` });
-        return;
-    }
     const scormDir = path_1.default.join(H5P_ROOT, 'scorm', 'content', scormId);
     if (!fs_1.default.existsSync(scormDir)) {
         const r2Config = (0, r2Helper_1.getR2Config)();
